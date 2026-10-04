@@ -165,4 +165,5 @@ with st.expander("Full model detail", expanded=False):
             st.warning("The dividend reserve ran dry and BTC was sold in some weeks.")
 
 st.caption(common.md("Sources: " + " · ".join(f"{k}: {v}" for k, v in stt.sources.items())
-                     + ". A modeling tool that applies your levers to Strive's published figures; not a recommendation."))
+                     + ". An independent modeling tool that applies your levers to Strive's published figures; not "
+                     "affiliated with or endorsed by Strive, Inc. Not a recommendation."))

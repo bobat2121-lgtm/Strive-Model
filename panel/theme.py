@@ -204,7 +204,8 @@ PAGE_CSS = f"""
 
 [data-testid="stExpander"] summary p {{ font-family: 'Ringbearer', serif; font-size: 22px; color: var(--mx-gold);
   text-transform: lowercase; }}
-.stApp [data-testid="stCaptionContainer"] {{ background: rgba(10, 8, 7, .8); padding: 6px 10px; }}
+.stApp [data-testid="stCaptionContainer"] {{ background: rgba(10, 8, 7, .96); padding: 6px 10px; opacity: 1;
+  color: {PAL['muted']}; }}  /* Streamlit fades captions; fade the ink instead, so the backing stays solid */
 """
 
 
