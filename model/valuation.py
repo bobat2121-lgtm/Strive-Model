@@ -7,6 +7,12 @@ Price target (TD Cowen's method, which reproduces their $44 on ASST from their p
     BTC Yield  = growth in BTC per assumed diluted share over the year (Strive's KPI)
 
 In plain terms: what common owns at T, plus k years' worth of the bitcoin the company added per share that year.
+k starts at what today's price implies and glides to the chosen k by a date (or holds the chosen k).
+
+The market mNAV (the price new common sells at) can follow the model's own valuation: solve_market() iterates until
+the market multiple at every year end equals the price target's implied mNAV at that date, with straight lines in
+between, starting from today's actual multiple. Because selling shares at a higher multiple raises BTC per share,
+which raises the value, the solution is a fixed point; it's damped and capped, and reports when it doesn't settle.
 BTC Yield counts every bitcoin bought, including those bought with SATA money (SATA holders are owed $100 a share,
 which NTAV deducts at T). The premium is split into the part from SATA-funded and from common-funded bitcoin so
 that's visible, and a net-basis value (gain measured on NTAV / BTC price, the part that belongs to common) is
@@ -29,6 +35,8 @@ Attribution ($ per share, adds up exactly):
 from __future__ import annotations
 
 from datetime import date
+
+from dataclasses import replace
 
 import pandas as pd
 
@@ -99,8 +107,18 @@ def net_value(df: pd.DataFrame, t: date, k: float) -> float | None:
     return value_per_share(b.ntav_per_share * b.fd_shares, net_btc_a * y, b.btc_price, b.fd_shares, k)
 
 
+def k_at(state: State, lv: Levers, t: date) -> float:
+    """The growth multiple at date t: today's implied k gliding to lv.growth_multiple by lv.k_glide_to, then held."""
+    if not lv.k_glide:
+        return lv.growth_multiple
+    k0, t0 = implied_k(state), state.price_date
+    span = (lv.k_glide_to - t0).days
+    w = 1.0 if span <= 0 else min(max((t - t0).days / span, 0.0), 1.0)
+    return k0 + (lv.growth_multiple - k0) * w
+
+
 def price_target(df: pd.DataFrame, state: State, t: date, lv: Levers, k: float | None = None) -> dict:
-    k = lv.growth_multiple if k is None else k
+    k = k_at(state, lv, t) if k is None else k
     r, g = engine.at(df, t), btc_gain(df, state, t)
     pt = value_per_share(r.ntav_per_share * r.fd_shares, g["btc_gain"], r.btc_price, r.fd_shares, k)
     sata_p, common_p = premium_split(df, t, k) if g["in_forecast"] else (None, None)
@@ -118,32 +136,53 @@ def implied_k(state: State) -> float:
     return (state.share_price - metrics.ntav_per_share(state)) / gain_ps
 
 
+def solve_market(state: State, lv: Levers, cagr: float, tol: float = 0.005, max_iter: int = 60,
+                 damp: float = 0.6) -> tuple[pd.DataFrame, dict | float | None, bool]:
+    """(weekly run, market mNAV path, settled?). In "model" mode the path makes the market multiple equal the
+    model's implied mNAV at each year end; in "manual" mode it's lv.mnav_target (hold or glide)."""
+    if lv.market_mnav_mode != "model":
+        return engine.run(state, lv, cagr, lv.mnav_target), lv.mnav_target, True
+    dates = valuation_dates(state, lv)
+    path = {d: metrics.mnav(state, state.share_price) for d in dates}
+    for _ in range(max_iter):
+        df = engine.run(state, lv, cagr, path)
+        implied = {d: price_target(df, state, d, lv)["implied_mnav"] for d in dates}
+        gap = max(abs(implied[d] - path[d]) for d in dates)
+        if gap < tol:
+            return df, path, True
+        path = {d: min(max(path[d] + damp * (implied[d] - path[d]), 0.5), 10.0) for d in dates}  # damped, capped
+    return engine.run(state, lv, cagr, path), path, False
+
+
 def _band(g: float) -> str:
     return f"{g * 100:g}% CAGR"
 
 
 def table(state: State, lv: Levers) -> dict:
-    """Price target at lv.pt_date: rows = k (the k today's price implies first), columns = BTC CAGR bands."""
-    runs = {g: engine.run(state, lv, g, lv.mnav_target) for g in lv.cagr_bands}
+    """Price target at lv.pt_date: rows = the k the glide ends at (today's implied k, held, first), columns = BTC
+    CAGR bands. Each cell is its own run with its own k path and, in "model" mode, its own consistent market path."""
     k_today = implied_k(state)
     rows = [(f"{k_today:.2f}x (today's price)", k_today)] + [(f"{k:g}x", k) for k in lv.k_table]
-    pt, mn = {}, {}
-    for g, df in runs.items():
+    pt, mn, settled = {}, {}, True
+    for g in lv.cagr_bands:
         for label, k in rows:
-            v = price_target(df, state, lv.pt_date, lv, k)
-            pt.setdefault(_band(g), {})[label] = v["price_target"]
-            mn.setdefault(_band(g), {})[label] = v["implied_mnav"]
+            cell = replace(lv, growth_multiple=k)
+            df, _, ok = solve_market(state, cell, g)
+            v = price_target(df, state, lv.pt_date, cell)
+            settled &= ok
+            pt.setdefault(_band(g), {})[label] = v["price_target"] if ok else float("nan")
+            mn.setdefault(_band(g), {})[label] = v["implied_mnav"] if ok else float("nan")
     order = [r[0] for r in rows]
     return {"price_target": pd.DataFrame(pt).reindex(order), "implied_mnav": pd.DataFrame(mn).reindex(order),
-            "k_today": k_today}
+            "k_today": k_today, "settled": settled}
 
 
 def attribution(state: State, lv: Levers, cagr: float) -> pd.DataFrame:
     """Rows = valuation dates; columns = start (NTAV today), the parts, ntav_end, end (price target), today_price,
     and the premium split (NaN where the year starts before the forecast)."""
-    full = engine.run(state, lv, cagr, lv.mnav_target)
-    no_common = engine.run(state, lv, cagr, lv.mnav_target, common=False, warrants=False)
-    no_costs = engine.run(state, lv, cagr, lv.mnav_target, common=False, warrants=False, burn=False)
+    full, path, _ = solve_market(state, lv, cagr)
+    no_common = engine.run(state, lv, cagr, path, common=False, warrants=False)
+    no_costs = engine.run(state, lv, cagr, path, common=False, warrants=False, burn=False)
     n0, b0, p0 = full["ntav_per_share"].iloc[0], full["btc_price"].iloc[0], full["share_price"].iloc[0]
     out = {}
     for t in valuation_dates(state, lv):
@@ -156,5 +195,6 @@ def attribution(state: State, lv: Levers, cagr: float) -> pd.DataFrame:
                   "op_costs": nc["ntav_per_share"] - nk["ntav_per_share"], "ntav_end": f["ntav_per_share"],
                   "growth_premium": v["growth_premium"], "premium_sata": v["premium_sata"],
                   "premium_common": v["premium_common"], "end": v["price_target"], "today_price": p0,
-                  "implied_mnav": v["implied_mnav"], "btc_yield": v["btc_yield"], "net_target": v["net_target"]}
+                  "implied_mnav": v["implied_mnav"], "btc_yield": v["btc_yield"], "net_target": v["net_target"],
+                  "k": v["k"], "market_mnav": f["mnav"]}
     return pd.DataFrame(out).T.astype(float)

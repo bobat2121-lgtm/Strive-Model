@@ -22,9 +22,9 @@ def defaults() -> levers.Levers:
 
 @st.cache_data(show_spinner="Running the model…", max_entries=64)
 def compute(st_: state.State, lv: levers.Levers) -> dict:
-    path = engine.run(st_, lv, lv.base_cagr, lv.mnav_target)
+    path, _, settled = valuation.solve_market(st_, lv, lv.base_cagr)
     return {"table": valuation.table(st_, lv), "attribution": valuation.attribution(st_, lv, lv.base_cagr),
-            "path": path, "implied_k": valuation.implied_k(st_),
+            "path": path, "implied_k": valuation.implied_k(st_), "settled": settled,
             "values": {d: valuation.price_target(path, st_, d, lv) for d in valuation.valuation_dates(st_, lv)}}
 
 
@@ -57,8 +57,17 @@ def signed(x: float) -> str:
 
 
 def mnav_label(lv: levers.Levers, m0: float) -> str:
-    return f"held at today's {m0:.2f}x" if lv.mnav_target is None else \
-        f"{m0:.2f}x gliding to {lv.mnav_target:.2f}x by {lv.mnav_glide_to:%b %d, %Y}"
+    if lv.market_mnav_mode == "model":
+        return f"that follows the model's own valuation (from today's {m0:.2f}x)"
+    if lv.mnav_target is None:
+        return f"held at today's {m0:.2f}x"
+    return f"{m0:.2f}x gliding to {lv.mnav_target:.2f}x by {lv.mnav_glide_to:%b %d, %Y}"
+
+
+def k_label(lv: levers.Levers, k_today: float) -> str:
+    if not lv.k_glide:
+        return f"k = {lv.growth_multiple:g}x"
+    return f"k gliding from today's {k_today:.2f}x to {lv.growth_multiple:g}x by {lv.k_glide_to:%b %d, %Y}"
 
 
 def rate_label(lv: levers.Levers, rate_now: float) -> str:
@@ -135,19 +144,32 @@ def sidebar(st_: state.State) -> levers.Levers:
         dates = valuation.valuation_dates(st_, d)
         pt_date = st.selectbox("Target date", dates, index=dates.index(d.pt_date) if d.pt_date in dates else 0,
                                format_func=lambda x: f"{x:%b %d, %Y}")
-        k = st.number_input("Growth multiple k (× the year's BTC $ Gain)", min_value=0.0, value=d.growth_multiple,
-                            step=0.25, format="%.2f",
+        k_today = valuation.implied_k(st_)
+        k_glide = st.toggle(f"Glide k from today's {k_today:.2f}x", value=d.k_glide,
+                            help="On: k starts at what today's price implies on Strive's actual trailing 12 months "
+                                 "and moves in a straight line to your k by the date, then holds. Off: your k "
+                                 "throughout.")
+        k = st.number_input("k (× the year's BTC $ Gain)" + (", at the end of the glide" if k_glide else ""),
+                            min_value=0.0, value=d.growth_multiple, step=0.25, format="%.2f",
                             help="TD Cowen's method: price target = (NTAV + k × the year's BTC $ Gain) ÷ diluted "
-                                 "shares. TD Cowen uses 3x; the page shows the k today's price implies.")
-        rows = _floats(st.text_input("Price-target table rows (k)", ", ".join(f"{x:g}" for x in d.k_table)),
-                       d.k_table)
+                                 "shares. TD Cowen uses 3x.")
+        k_by = st.date_input("k reaches it by", value=d.k_glide_to, disabled=not k_glide)
+        rows = _floats(st.text_input("Price-target table rows (k at the end of the glide)",
+                                     ", ".join(f"{x:g}" for x in d.k_table)), d.k_table)
 
         st.subheader("5 · Market mNAV")
         st.caption("The price new common sells at during the forecast (ASST ÷ NTAV per diluted share).")
-        hold = st.toggle(f"Hold today's {m0:.2f}x", value=d.mnav_target is None)
+        mode = st.radio("Market mNAV", ["model", "manual"], index=0 if d.market_mnav_mode == "model" else 1,
+                        label_visibility="collapsed",
+                        format_func=lambda x: {"model": "Follow the model's valuation",
+                                               "manual": "Manual (hold or glide)"}[x],
+                        help="Follow: at each year end the market multiple equals the price target's implied mNAV "
+                             "(solved), so shares sell at what the model says they're worth.")
+        manual = mode == "manual"
+        hold = st.toggle(f"Hold today's {m0:.2f}x", value=d.mnav_target is None, disabled=not manual)
         target = st.number_input("Glide to (x)", min_value=0.1, value=d.mnav_target or 2.0, step=0.05,
-                                 format="%.2f", disabled=hold)
-        glide_to = st.date_input("Reach it by", value=d.mnav_glide_to, disabled=hold)
+                                 format="%.2f", disabled=not manual or hold)
+        glide_to = st.date_input("Reach it by", value=d.mnav_glide_to, disabled=not manual or hold)
 
         with st.expander("Warrants and costs"):
             wex = st.slider(f"PIPE warrants exercised on {d.warrant_date:%b %d} (%)", 0, 100,
@@ -168,5 +190,6 @@ def sidebar(st_: state.State) -> levers.Levers:
                    sata_rate_target=rate_target / 100 if glide_rate else None, sata_rate_glide_to=rate_by,
                    sata_growth=growth / 100,
                    common_weekly_pct=common / 100, mnav_target=None if hold else target, mnav_glide_to=glide_to,
-                   pt_date=pt_date, growth_multiple=k, k_table=rows,
+                   market_mnav_mode=mode, pt_date=pt_date, growth_multiple=k, k_glide=k_glide, k_glide_to=k_by,
+                   k_table=rows,
                    warrant_exercise=wex / 100, net_cash_burn_weekly_usd=burn * 1e6)

@@ -30,10 +30,13 @@ class Levers:
     common_weekly_pct: float = 0.005
     # 4) Valuation, TD Cowen's method: price target = (NTAV + k x the year's BTC $ Gain) / FD shares
     pt_date: date = date(2028, 12, 31)
-    growth_multiple: float = 3.0             # k (TD Cowen: 3x on ASST)
+    growth_multiple: float = 3.0             # k at the end of the glide (TD Cowen: 3x on ASST)
+    k_glide: bool = True                     # start k at what today's price implies and glide to growth_multiple
+    k_glide_to: date = date(2028, 12, 31)
     k_table: list[float] = field(default_factory=lambda: [1.0, 2.0, 3.0, 4.0, 5.0])
-    # Market mNAV (price / NTAV per share) during the forecast: the price new common sells at. None holds today's;
-    # a target glides today's multiple to it by mnav_glide_to. It doesn't enter the price target directly.
+    # Market mNAV (price / NTAV per share) during the forecast: the price new common sells at. "model" makes it equal
+    # the model's own valuation at each year end (solved); "manual" holds today's (mnav_target None) or glides to it.
+    market_mnav_mode: str = "model"
     mnav_target: float | None = None
     mnav_glide_to: date = date(2026, 12, 31)
     # Fixed assumptions
@@ -72,6 +75,9 @@ def load(path: Path | str = DEFAULT_PATH) -> Levers:
         mnav_glide_to=m.get("glide_to", d.mnav_glide_to),
         pt_date=val.get("price_target_date", d.pt_date),
         growth_multiple=float(val.get("growth_multiple", d.growth_multiple)),
+        k_glide=bool(val.get("glide_from_today", d.k_glide)),
+        k_glide_to=val.get("glide_to", d.k_glide_to),
+        market_mnav_mode=str(m.get("mode", d.market_mnav_mode)),
         k_table=[float(x) for x in val.get("table") or d.k_table],
         warrant_date=w.get("exercise_date", d.warrant_date),
         warrant_exercise=_pct(w.get("exercise_pct", d.warrant_exercise * 100)),

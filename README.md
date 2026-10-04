@@ -15,9 +15,11 @@ values ASST with the multiple Strive itself publishes. A Streamlit app puts the 
    PT = (NTAV + k x the year's BTC $ Gain) / diluted shares
    ```
    - **BTC $ Gain** = BTC held at the start of the year × BTC Yield × the year-end BTC price.
-   - **k** defaults to 3x, TD Cowen's multiple. Today's price implies about 3.4x on Strive's actual trailing 12 months.
+   - **k** starts at what today's price implies (about 3.4x on Strive's actual trailing 12 months) and glides in a straight line to your k (default 3x, TD Cowen's) by a date (default the target date). You can also turn the glide off.
    - The forecast runs to 2031.
-5. **Market mNAV**: Strive's "Multiple to Net Treasury Asset Value", i.e. ASST price ÷ NTAV per diluted share (2.13x on 10/4/26). During the forecast it sets the price new common sells at. Hold today's multiple, or glide to a target.
+5. **Market mNAV**: Strive's "Multiple to Net Treasury Asset Value", i.e. ASST price ÷ NTAV per diluted share (2.13x on 10/4/26). During the forecast it sets the price new common sells at.
+   - **Default, "Follow the model's valuation":** the model solves for a path where the market multiple at each year end equals the price target's implied mNAV, so shares sell at what the model says they're worth.
+   - **Manual:** hold today's multiple, or glide to a target.
 
 **Fixed assumptions:**
 - the PIPE warrants (25.35M at $27, exercised on 10/13/26 if in the money)

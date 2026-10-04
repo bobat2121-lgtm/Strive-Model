@@ -21,11 +21,15 @@ common:
 
 valuation:                    # TD Cowen's method: price target = (NTAV + k x the year's BTC $ Gain) / FD shares
   price_target_date: 2028-12-31
-  growth_multiple: 3          # k. TD Cowen uses 3x on ASST; today's price implies ~3.4x on Strive's trailing 12 months
+  growth_multiple: 3          # k at the end of the glide. TD Cowen uses 3x on ASST
+  glide_from_today: true      # start k at what today's price implies (~3.4x on Strive's trailing 12 months)
+  glide_to: 2028-12-31        # ... and glide in a straight line to growth_multiple by this date, then hold
   table: [1, 2, 3, 4, 5]      # rows of the price-target table (k)
 
 mnav:                         # market mNAV during the forecast (ASST / NTAV per diluted share, 2.13x on 10/4/26):
-  target: null                # the price new common sells at. null = hold today's; a number glides to it by glide_to
+                              # the price new common sells at
+  mode: model                 # model = equals the model's own valuation at each year end (solved); manual = below
+  target: null                # manual only: null = hold today's; a number glides to it by glide_to
   glide_to: 2026-12-31
 
 warrants:                     # PIPE warrants (25.35M at 9/25)

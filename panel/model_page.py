@@ -32,9 +32,13 @@ st.caption(common.md(f"{stt.btc:,.0f} BTC at ${stt.btc_price:,.0f} · SATA {comm
 st.header("Where the price target comes from")
 a = res["attribution"]
 st.caption(common.md(
-    f"TD Cowen's method: price target = (NTAV + {lv.growth_multiple:g}x the year's BTC $ Gain) ÷ diluted shares. "
-    f"Base case: {lv.base_cagr * 100:g}% BTC CAGR after {lv.ye_anchor:%b %Y}; new common sells at a market mNAV "
-    f"{common.mnav_label(lv, m0)}; SATA dividends {common.rate_label(lv, rate)}. $ per share."))
+    f"TD Cowen's method: price target = (NTAV + k × the year's BTC $ Gain) ÷ diluted shares, "
+    f"{common.k_label(lv, res['implied_k'])}. Base case: {lv.base_cagr * 100:g}% BTC CAGR after "
+    f"{lv.ye_anchor:%b %Y}; new common sells at a market mNAV {common.mnav_label(lv, m0)}; SATA dividends "
+    f"{common.rate_label(lv, rate)}. $ per share."))
+if not res["settled"] or not res["table"]["settled"]:
+    st.warning("The market mNAV couldn't be made consistent with the valuation for some settings (the multiple "
+               "feeds on itself at a high k). Those cells are blank; try a lower k or Manual market mNAV.")
 dates = list(a.index)
 pick = st.segmented_control("Valuation date", dates, default=lv.pt_date if lv.pt_date in dates else dates[-1],
                             required=True, format_func=lambda d: f"{d:%b %Y}" + (" · target" if d == lv.pt_date else ""))
@@ -48,8 +52,8 @@ common.tiles([
     (f"{pick.year} BTC Yield", f"{v['btc_yield']:.0%}",
      f"Growth in BTC per diluted share during {pick.year}. BTC Gain = {v['btc_gain']:,.0f} BTC = "
      f"{common.signed(v['gain_per_share'])} per share at the date's BTC price"),
-    ("k multiple", f"{lv.growth_multiple:g}x", f"Today's price implies {res['implied_k']:.2f}x on Strive's actual "
-                                               f"trailing 12 months"),
+    (f"k at {pick:%b %Y}", f"{v['k']:.2f}x", f"Today's price implies {res['implied_k']:.2f}x on Strive's actual "
+                                             f"trailing 12 months; {common.k_label(lv, res['implied_k'])}"),
     ("Implied mNAV", f"{v['implied_mnav']:.2f}x", "Price target ÷ NTAV per share"),
     ("Net-basis value", net, "Reference: the same formula with the gain counted only on what belongs to common "
                              "(net BTC per share = NTAV ÷ BTC price)."),
@@ -94,8 +98,10 @@ st.dataframe(shown, width="stretch")
 
 # ------------------------------------------------------------------ k x CAGR table
 st.header("Price target by growth multiple and BTC CAGR")
-st.caption(f"Price target at {lv.pt_date:%b %d, %Y}. Rows: k on the year's BTC $ Gain; the first row is the k today's "
-           f"price implies. Columns: BTC CAGR after {lv.ye_anchor:%b %Y}. Base case highlighted.")
+st.caption(f"Price target at {lv.pt_date:%b %d, %Y}. Rows: the k the glide ends at (on the year's BTC $ Gain); the "
+           f"first row holds the k today's price implies. Columns: BTC CAGR after {lv.ye_anchor:%b %Y}. Each cell is "
+           f"its own run{', with its own consistent market mNAV' if lv.market_mnav_mode == 'model' else ''}. "
+           f"Base case highlighted.")
 t = res["table"]
 hl = f"background-color: {c['s1']}26; font-weight: 600"
 base_row, base_col = f"{lv.growth_multiple:g}x", f"{lv.base_cagr * 100:g}% CAGR"
@@ -109,8 +115,8 @@ for tab, (key, fmt) in zip(st.tabs(["Price target", "Implied mNAV"]),
 
 # ------------------------------------------------------------------ the forecast
 st.header(f"Forecast to {lv.horizon_end.year}")
-st.caption("Base case, week by week. The market price is the mNAV path × NTAV per share; it sets the price new common "
-           "sells at. Price and SATA charts use a log scale.")
+st.caption("Base case, week by week. The market price is the market mNAV × NTAV per share; it sets the price new "
+           "common sells at. Price and SATA charts use a log scale.")
 p = res["path"].reset_index()
 p["sata_week"] = p["raised_sata"] / (p["date"].diff().dt.days / 7)
 p = p.rename(columns={"share_price": "Market price", "ntav_per_share": "NTAV per share",
@@ -143,7 +149,9 @@ st.dataframe(pd.DataFrame({
     "Dividends / yr": [common.usd(r["sata_rate"] * r["sata_notional"]) for r in ye],
     "Diluted shares": [f"{r['fd_shares'] / 1e6:,.1f}M" for r in ye],
     "NTAV per share": [f"${r['NTAV per share']:,.2f}" for r in ye],
+    "Market mNAV": [f"{r['mnav']:.2f}x" for r in ye],
     "Market price": [f"${r['Market price']:,.2f}" for r in ye],
+    "k": [f"{vals[r['date']]['k']:.2f}x" if r["date"] in vals else "—" for r in ye],
     "BTC Yield": [f"{vals[r['date']]['btc_yield']:.0%}" if r["date"] in vals else "—" for r in ye],
     "Value": [f"${vals[r['date']]['price_target']:,.2f}" if r["date"] in vals else "—" for r in ye],
     "Coverage": [f"{r['coverage_years']:.1f} yrs" for r in ye],

@@ -311,6 +311,12 @@ Strive Model/
 - **Cash reserve:** the 18-month policy holds.
 - **Base case:** PT ≈ $241, an implied 2.53x.
 
+**Consistent market mNAV and k glide (2026-10-04):**
+- **Market mNAV** defaults to following the model's valuation. A damped fixed-point solve makes the market multiple equal the implied mNAV at each year end; it settles in about 0.1s. Manual hold/glide is still available.
+- **k** glides from today's implied k (about 3.35–3.37x, from the actual trailing 12 months) to 3x by the target date.
+- **Base YE28 target:** about $199 (1.88x).
+- **What it reveals:** the multiple compresses after 2027 (2.57x → 1.14x by 2031) because BTC Yield slows (68% → 5%) while common keeps selling 0.5% of shares a week. A likely next lever is to gate common issuance by mNAV.
+
 **SATA made demand-led (2026-10-04):**
 - The "% of the BTC stack" rule compounded to an implausible $389B by YE31.
 - New rule: $70M a week through YE26, then the weekly amount grows at a lever rate (default 50% a year).

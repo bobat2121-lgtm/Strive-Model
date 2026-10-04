@@ -64,14 +64,22 @@ def sata_per_week(lv: Levers, d: date) -> float:
     return lv.sata_weekly_usd * (1 + lv.sata_growth) ** _years_after(lv.sata_switch, d)
 
 
-def run(state: State, lv: Levers, cagr: float, mnav: float | None = None, *, sata: bool = True,
+def path_through(dates: list[date], v0: float, points: dict[date, float]) -> np.ndarray:
+    """Today's value, then straight lines through each {date: value} point, held after the last one."""
+    xs = [dates[0].toordinal()] + [d.toordinal() for d in sorted(points)]
+    ys = [v0] + [points[d] for d in sorted(points)]
+    return np.interp([d.toordinal() for d in dates], xs, ys)
+
+
+def run(state: State, lv: Levers, cagr: float, mnav: float | dict[date, float] | None = None, *, sata: bool = True,
         common: bool = True, warrants: bool = True, burn: bool = True) -> pd.DataFrame:
-    """Weekly rows from today to the horizon. mnav=None holds today's multiple; a number glides to it.
+    """Weekly rows from today to the horizon. mnav=None holds today's multiple; a number glides to it by
+    lv.mnav_glide_to; a {date: multiple} dict runs through those points (the solved, consistent path).
     The switches turn pieces off for the attribution."""
     dates = schedule(state.price_date, lv.horizon_end)
     m0 = metrics.mnav(state, state.share_price)
     P = btc_path(dates, state.btc_price, lv.ye_anchor, lv.ye_btc_price, cagr)
-    M = glide_path(dates, m0, mnav, lv.mnav_glide_to)
+    M = path_through(dates, m0, mnav) if isinstance(mnav, dict) else glide_path(dates, m0, mnav, lv.mnav_glide_to)
     R = glide_path(dates, lv.sata_rate if lv.sata_rate is not None else state.sata_rate, lv.sata_rate_target,
                    lv.sata_rate_glide_to)
 

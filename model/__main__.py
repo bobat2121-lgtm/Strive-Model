@@ -45,7 +45,9 @@ def show_today(st: state.State, rate: float) -> None:
 def show_levers(st: state.State, lv: levers.Levers, rate: float) -> None:
     m0 = metrics.mnav(st, st.share_price)
     bands = " / ".join(f"{g:.0%}" for g in lv.cagr_bands)
-    mn = f"hold today's {m0:.2f}x" if lv.mnav_target is None else f"{m0:.2f}x -> {lv.mnav_target:.2f}x by {lv.mnav_glide_to}"
+    mn = ("follows the model's valuation" if lv.market_mnav_mode == "model" else
+          f"hold today's {m0:.2f}x" if lv.mnav_target is None else
+          f"{m0:.2f}x -> {lv.mnav_target:.2f}x by {lv.mnav_glide_to}")
     print("\nLEVERS")
     print(f"  1 BTC        ${lv.ye_btc_price:,.0f} at {lv.ye_anchor}, then {bands} CAGR (base {lv.base_cagr:.0%})")
     later = f", then growing {lv.sata_growth:.0%} a year"
@@ -54,9 +56,10 @@ def show_levers(st: state.State, lv: levers.Levers, rate: float) -> None:
     print(f"  2 SATA       {usd(lv.sata_weekly_usd)} / week through {lv.sata_switch}{later} · at $100 par · {rt} · "
           f"{lv.reserve_months:g}-month cash reserve")
     print(f"  3 Common     {lv.common_weekly_pct:.2%} of FD shares / week, sold at the market mNAV ({mn})")
-    print(f"  4 Valuation  price target {lv.pt_date} = (NTAV + {lv.growth_multiple:g}x the year's BTC $ Gain) / FD shares "
-          f"(TD Cowen) · table k {lv.k_table[0]:g}x-{lv.k_table[-1]:g}x · today's price implies "
-          f"{valuation.implied_k(st):.2f}x")
+    kd = (f"k {valuation.implied_k(st):.2f}x (today's price) -> {lv.growth_multiple:g}x by {lv.k_glide_to}"
+          if lv.k_glide else f"k {lv.growth_multiple:g}x")
+    print(f"  4 Valuation  price target {lv.pt_date} = (NTAV + k x the year's BTC $ Gain) / FD shares (TD Cowen) · {kd} "
+          f"· table k {lv.k_table[0]:g}x-{lv.k_table[-1]:g}x")
     print(f"  Warrants     {lv.warrant_exercise:.0%} of {st.warrants / 1e6:.2f}M at ${lv.warrant_strike:g} on "
           f"{lv.warrant_date} if ASST > strike · burn {usd(lv.net_cash_burn_weekly_usd)}/week · forecast to {lv.horizon_end}")
 
@@ -70,7 +73,9 @@ def show_tables(st: state.State, lv: levers.Levers) -> None:
 
 
 def show_base(st: state.State, lv: levers.Levers) -> None:
-    df = engine.run(st, lv, lv.base_cagr, lv.mnav_target)
+    df, _, settled = valuation.solve_market(st, lv, lv.base_cagr)
+    if not settled:
+        print("  ! the market mNAV didn't settle on the valuation; numbers use the last pass")
     vals = {v: valuation.price_target(df, st, v, lv) for v in valuation.valuation_dates(st, lv)}
     yes = [st.price_date] + [date(y, 12, 31) for y in range(st.price_date.year, lv.horizon_end.year + 1)
                              if st.price_date < date(y, 12, 31) <= lv.horizon_end]
@@ -81,7 +86,8 @@ def show_base(st: state.State, lv: levers.Levers) -> None:
         rows.append({"date": d, "BTC price": f"${r.btc_price:,.0f}", "BTC held": f"{r.btc:,.0f}",
                      "SATA": usd(r.sata_notional), "Amplif.": f"{r.amplification:.1%}",
                      "FD shares": f"{r.fd_shares / 1e6:.1f}M", "Sats/sh": f"{r.sats_per_share:,.0f}",
-                     "NTAV/sh": f"${r.ntav_per_share:,.2f}", "Mkt price": f"${r.share_price:,.2f}",
+                     "NTAV/sh": f"${r.ntav_per_share:,.2f}", "Mkt mNAV": f"{r.mnav:.2f}x",
+                     "Mkt price": f"${r.share_price:,.2f}", "k": f"{v['k']:.2f}x" if v else "—",
                      "BTC Yield": f"{v['btc_yield']:.0%}" if v else "—",
                      "Value": f"${v['price_target']:,.2f}" if v else "—",
                      "Impl. mNAV": f"{v['implied_mnav']:.2f}x" if v else "—"})

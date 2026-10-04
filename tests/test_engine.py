@@ -55,6 +55,15 @@ def test_sata_rate_holds_or_glides(st, lv):
     assert r.dividends == pytest.approx(0.10 * prev.sata_notional * days / 365)
 
 
+def test_mnav_can_run_through_year_end_points(st, lv):
+    df = engine.run(st, lv, 0.4, {date(2026, 12, 31): 2.5, date(2027, 12, 31): 1.5})
+    assert df["mnav"].iloc[0] == pytest.approx(metrics.mnav(st, st.share_price))
+    assert engine.at(df, date(2026, 12, 31)).mnav == pytest.approx(2.5)
+    r = engine.at(df, date(2027, 6, 30))                                         # straight line in between
+    assert r.mnav == pytest.approx(2.5 - (r.name.date() - date(2026, 12, 31)).days / 365)
+    assert engine.at(df, date(2029, 6, 30)).mnav == pytest.approx(1.5)            # held after the last point
+
+
 def test_cash_is_conserved(st, lv):
     df = engine.run(st, lv, 0.30, 1.6)
     inflow = (df.raised_sata + df.raised_common + df.raised_warrants - df.dividends - df.opex).sum()

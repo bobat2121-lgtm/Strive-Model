@@ -19,6 +19,31 @@ def test_implied_k_on_the_actual_trailing_twelve_months(st):
     assert round(valuation.implied_k(st), 2) == 3.36
 
 
+def test_k_glides_from_todays_implied_k(st, lv):
+    k0 = valuation.implied_k(st)
+    assert valuation.k_at(st, lv, st.price_date) == pytest.approx(k0)
+    assert k0 > valuation.k_at(st, lv, date(2027, 12, 31)) > 3.0
+    assert valuation.k_at(st, lv, date(2028, 12, 31)) == pytest.approx(3.0)
+    assert valuation.k_at(st, lv, date(2030, 12, 31)) == pytest.approx(3.0)        # held after the glide
+    assert valuation.k_at(st, replace(lv, k_glide=False), date(2026, 12, 31)) == 3.0
+
+
+def test_market_mnav_follows_the_valuation(st, lv):
+    df, path, settled = valuation.solve_market(st, lv, 0.40)
+    assert settled
+    for d in valuation.valuation_dates(st, lv):
+        v = valuation.price_target(df, st, d, lv)
+        assert engine.at(df, d).mnav == pytest.approx(v["implied_mnav"], abs=0.01)  # shares sell at the model's value
+    assert df["mnav"].iloc[0] == pytest.approx(metrics.mnav(st, st.share_price))   # starting from today's actual
+
+
+def test_manual_market_mnav_is_the_old_hold_or_glide(st, lv):
+    manual = replace(lv, market_mnav_mode="manual", mnav_target=1.8)
+    df, path, settled = valuation.solve_market(st, manual, 0.40)
+    assert settled and path == 1.8
+    assert engine.at(df, date(2027, 6, 30)).mnav == pytest.approx(1.8)
+
+
 def test_price_target_by_hand(st, lv):
     df = engine.run(st, lv, 0.40)
     a, b = engine.at(df, date(2027, 12, 31)), engine.at(df, date(2028, 12, 31))
@@ -79,8 +104,8 @@ def test_price_target_table_rises_with_k_and_cagr(st, lv):
     assert (body.diff().iloc[1:] > 0).all().all()       # higher k, higher target
     assert (body.T.diff().iloc[1:] > 0).all().all()     # higher CAGR, higher target
     assert t["price_target"].index[0] == f"{t['k_today']:.2f}x (today's price)"
-    base = valuation.price_target(engine.run(st, lv, 0.40), st, lv.pt_date, lv)["price_target"]
-    assert t["price_target"].loc["3x", "40% CAGR"] == pytest.approx(base)
+    base = valuation.price_target(valuation.solve_market(st, lv, 0.40)[0], st, lv.pt_date, lv)["price_target"]
+    assert t["price_target"].loc["3x", "40% CAGR"] == pytest.approx(base) and t["settled"]
 
 
 def test_calibration_reproduces_the_six_week_averages(base, feed, bars):
