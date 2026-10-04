@@ -146,13 +146,23 @@ SCENE_CSS = f"""
 """
 
 PAGE_CSS = f"""
-@import url('https://fonts.googleapis.com/css2?family=Silkscreen&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Silkscreen&family=Inter:wght@400;500;600;700&family=Cinzel:wght@700&display=swap');
 @font-face {{ font-family: 'Ringbearer'; src: url('{FONT}') format('truetype'); font-display: swap; }}
 :root {{ --mx-surface: {PAL['surface']}; --mx-ink: {PAL['ink']}; --mx-ink2: {PAL['ink2']}; --mx-muted: {PAL['muted']};
   --mx-gold: {PAL['gold']}; --mx-lava: {PAL['lava']}; }}
 .stApp, .stApp p, .stApp label, .stApp li {{ color: var(--mx-ink); font-family: 'Inter', sans-serif; }}
 [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-testid="stBottom"] > div {{ background: transparent; }}
 [data-testid="stHeader"] {{ background: rgba(7, 8, 13, .72); backdrop-filter: blur(6px); border-bottom: 1px solid #3a1c0e; }}
+/* the author's handle in the top-left corner of the bar; Ringbearer has no "@", so Cinzel draws that one glyph */
+[data-testid="stHeader"]::before {{ content: "@WallyXIX"; position: absolute; left: 22px; top: 50%; z-index: 1;
+  transform: translateY(-50%); padding-right: 18px; border-right: 1px solid #5a2e14; pointer-events: none;
+  font-family: 'Ringbearer', 'Cinzel', serif; font-size: 26px; line-height: 1; letter-spacing: .02em;
+  color: var(--mx-gold); text-shadow: 0 2px 0 #000, 0 0 14px rgba(255, 150, 40, .45); }}
+[data-testid="stToolbar"] {{ padding-left: 178px; }}
+@media (max-width: 640px) {{
+  [data-testid="stHeader"]::before {{ font-size: 18px; left: 12px; padding-right: 12px; }}
+  [data-testid="stToolbar"] {{ padding-left: 118px; }}
+}}
 .block-container {{ max-width: 960px; padding-top: 4.6rem; padding-bottom: 6rem; }}
 [data-testid="stSidebar"] {{ background: rgba(18, 13, 11, .97); border-right: 2px solid #b4501c;
   box-shadow: 0 0 18px rgba(255, 106, 19, .25); }}
