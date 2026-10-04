@@ -164,7 +164,9 @@ PAGE_CSS = f"""
   [data-testid="stToolbar"] {{ padding-left: 118px; }}
 }}
 .block-container {{ max-width: 960px; padding-top: 4.6rem; padding-bottom: 6rem; }}
-[data-testid="stSidebar"] {{ background: rgba(18, 13, 11, .97); border-right: 2px solid #b4501c;
+[data-testid="stSidebar"] {{ background: rgba(18, 13, 11, .97); }}
+/* the lava edge only while open: a collapsed sidebar keeps its border's width and would push the page 2px right */
+[data-testid="stSidebar"][aria-expanded="true"] {{ border-right: 2px solid #b4501c;
   box-shadow: 0 0 18px rgba(255, 106, 19, .25); }}
 [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {{ font-family: 'Ringbearer', serif; color: var(--mx-gold);
   font-weight: 400; text-transform: lowercase; letter-spacing: .02em; }}
