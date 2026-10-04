@@ -127,7 +127,7 @@ with st.expander("Full model detail", expanded=False):
         st.markdown(common.md(
             "- **NTAV**: what common owns per share (BTC + cash + STRC − SATA, per diluted share).\n"
             "- **BTC move**: those net assets tracking BTC one-for-one. **Amplification**: what SATA-funded BTC gains, "
-            "after the 18-month cash-reserve drag. **SATA dividends**: what that SATA costs. **Issuance**: common and "
+            "after the 18-month cash-reserve drag. **SATA dividends**: what that SATA costs. **Common issuance**: common and "
             "warrant shares sold above NTAV per share. **Op. costs**: the net cash burn, not dividends.\n"
             "- **Growth premium**: k × the year's BTC $ Gain, split by who paid for the year's bitcoin. **Net-basis "
             "value** is a reference that credits SATA only with what its bitcoin earns above the dividend."))

@@ -7,7 +7,7 @@ import altair as alt
 import pandas as pd
 
 LABELS = {"btc_move": "BTC move", "amplification": "Amplification", "sata_dividends": "SATA dividends",
-          "issuance": "Issuance", "op_costs": "Op. costs", "growth_premium": "Growth premium"}
+          "issuance": "Common issuance", "op_costs": "Op. costs", "growth_premium": "Growth premium"}
 PREMIUM = {"premium_sata": "SATA premium", "premium_common": "Common premium"}  # the growth premium, by funding
 
 
