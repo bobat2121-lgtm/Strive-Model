@@ -1,10 +1,11 @@
 """Visual themes inspired by the Vault of Glass (Destiny, 2014): brutalist Vex stone, bronze machine detail, milky
 radiolarian light, red Gorgon sightlines, circular time gates and floating Oracles, deep below Venus.
 
-Three looks share one set of HTML components (hero, section titles, metric cards, the price-target ledger) and differ
+The looks share one set of HTML components (hero, section titles, metric cards, the price-target ledger) and differ
 only in CSS and background art:
+    vault     the chosen direction: Monolith's teal and gold, carved headings, stone slabs and Roman numerals over
+              living Vex circuit traces, each firing a slow wave of light on its own paced timer
     monolith  flat 2D: layered stone silhouettes around a circular gate; square slabs with bronze inlay
-    spire     2D drawn to look 3D: a perspective colonnade receding to a lit gate; extruded stone blocks
     oracle    holographic glass: Vex circuit traces and floating rings; translucent panels with corner brackets
 All art is original SVG and CSS; nothing from the game is used. Chart colors are validated (dataviz validator).
 """
@@ -17,10 +18,18 @@ import random
 
 import streamlit as st
 
-DEFAULT = "monolith"
+DEFAULT = "vault"
 KEY = "vg_theme"
 
 THEMES = {
+    "vault": {
+        "label": "Vault · Monolith with living circuits",
+        "fonts": "family=Cinzel:wght@500;700&family=Inter:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700",
+        "head": "'Cinzel', serif", "body": "'Inter', sans-serif", "num": "'Barlow Condensed', sans-serif",
+        "bg": "#0a0d0f", "surface": "#141a1e", "border": "#2b343a", "accent": "#b0894f", "glow": "#9fe7dc",
+        "ink": "#ece6da", "ink2": "#bdb6a9", "muted": "#858a8f", "grid": "#242c32",
+        "up": "#2ea596", "down": "#df5446", "total": "#8b9196", "s1": "#2ea596", "s2": "#b47a32",
+    },
     "monolith": {
         "label": "Monolith · flat 2D",
         "fonts": "family=Cinzel:wght@500;700&family=Inter:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700",
@@ -28,14 +37,6 @@ THEMES = {
         "bg": "#0b0e10", "surface": "#141a1e", "border": "#2b343a", "accent": "#b0894f", "glow": "#9fe7dc",
         "ink": "#ece6da", "ink2": "#bdb6a9", "muted": "#858a8f", "grid": "#242c32",
         "up": "#2ea596", "down": "#df5446", "total": "#8b9196", "s1": "#2ea596", "s2": "#b47a32",
-    },
-    "spire": {
-        "label": "Spire · 3D-look",
-        "fonts": "family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600",
-        "head": "'Rajdhani', sans-serif", "body": "'Inter', sans-serif", "num": "'Rajdhani', sans-serif",
-        "bg": "#06080b", "surface": "#151d22", "border": "#2c3940", "accent": "#c9a46a", "glow": "#bff3ec",
-        "ink": "#eef3f1", "ink2": "#b8c4c2", "muted": "#7d8a8a", "grid": "#1e282e",
-        "up": "#28a397", "down": "#e5574a", "total": "#7f8a90", "s1": "#28a397", "s2": "#b47d38",
     },
     "oracle": {
         "label": "Oracle · holographic glass",
@@ -109,60 +110,6 @@ def _monolith_svg() -> str:
             + "".join(p) + "</svg>")
 
 
-def _spire_svg() -> str:
-    """A colonnade receding to a lit time gate: perspective floor, shaded pillar faces, mist. Looks 3D; it's 2D."""
-    vx, vy = 800, 500
-    p = ['<defs>'
-         '<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#04060a"/>'
-         '<stop offset="1" stop-color="#0d1a1d"/></linearGradient>'
-         '<linearGradient id="floor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0c1416"/>'
-         '<stop offset="1" stop-color="#040607"/></linearGradient>'
-         '<linearGradient id="face" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2b373d"/>'
-         '<stop offset="1" stop-color="#182025"/></linearGradient>'
-         '<linearGradient id="side" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0e1418"/>'
-         '<stop offset="1" stop-color="#090d10"/></linearGradient>'
-         '<radialGradient id="gate"><stop offset="0" stop-color="#f2fffc" stop-opacity="0.95"/>'
-         '<stop offset="0.35" stop-color="#9fe7dc" stop-opacity="0.45"/>'
-         '<stop offset="1" stop-color="#9fe7dc" stop-opacity="0"/></radialGradient>'
-         '<linearGradient id="mist" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9fe7dc" stop-opacity="0"/>'
-         '<stop offset="0.5" stop-color="#9fe7dc" stop-opacity="0.07"/>'
-         '<stop offset="1" stop-color="#9fe7dc" stop-opacity="0"/></linearGradient>'
-         '</defs>',
-         '<rect width="1600" height="1000" fill="url(#sky)"/>',
-         f'<rect y="{vy}" width="1600" height="{1000 - vy}" fill="url(#floor)"/>']
-    for x in range(-1600, 3300, 150):  # floor rays to the vanishing point
-        p.append(f'<line x1="{vx}" y1="{vy}" x2="{x}" y2="1000" stroke="#1a272b" stroke-width="1.2"/>')
-    for i in range(1, 14):  # floor rows, closer together toward the horizon
-        y = vy + (1000 - vy) * (1 - 0.74 ** i)
-        p.append(f'<line x1="0" y1="{y:.1f}" x2="1600" y2="{y:.1f}" stroke="#152024" stroke-width="1"/>')
-    for x in range(-800, 2500, 200):  # ceiling beams
-        p.append(f'<line x1="{vx}" y1="{vy}" x2="{x}" y2="0" stroke="#0f171a" stroke-width="2"/>')
-    p += [f'<circle cx="{vx}" cy="{vy}" r="190" fill="url(#gate)"/>',
-          f'<circle cx="{vx}" cy="{vy}" r="118" fill="none" stroke="#c9a46a" stroke-opacity="0.45" stroke-width="3"/>',
-          f'<circle cx="{vx}" cy="{vy}" r="160" fill="none" stroke="#9fe7dc" stroke-opacity="0.18" stroke-width="2"/>',
-          f'<rect y="{vy - 90}" width="1600" height="180" fill="url(#mist)"/>']
-    for i in range(6, -1, -1):  # pillars, far to near, both sides
-        s = 0.78 ** i
-        w, top, bot = 150 * s, vy - 440 * s, vy + 480 * s
-        for side in (-1, 1):
-            cx = vx + side * 660 * s
-            inner = cx - side * w / 2
-            d = side * w * 0.38
-            p.append(f'<polygon points="{inner:.1f},{top:.1f} {inner - d:.1f},{top + (bot - top) * 0.05:.1f} '
-                     f'{inner - d:.1f},{bot - (bot - top) * 0.05:.1f} {inner:.1f},{bot:.1f}" fill="url(#side)"/>')
-            p.append(f'<rect x="{cx - w / 2:.1f}" y="{top:.1f}" width="{w:.1f}" height="{bot - top:.1f}" fill="url(#face)"/>')
-            p.append(f'<rect x="{cx - w * 0.66:.1f}" y="{top - w * 0.32:.1f}" width="{w * 1.32:.1f}" '
-                     f'height="{w * 0.32:.1f}" fill="#222c32"/>')
-            p.append(f'<rect x="{cx - w * 0.66:.1f}" y="{top - w * 0.32:.1f}" width="{w * 1.32:.1f}" '
-                     f'height="{max(1.0, w * 0.03):.1f}" fill="#3a474e"/>')
-            p.append(f'<rect x="{cx - w * 0.6:.1f}" y="{bot - w * 0.12:.1f}" width="{w * 1.2:.1f}" '
-                     f'height="{w * 0.24:.1f}" fill="#11181c"/>')
-            p.append(f'<rect x="{cx - w * 0.06:.1f}" y="{top + (bot - top) * 0.3:.1f}" width="{w * 0.12:.1f}" '
-                     f'height="{(bot - top) * 0.25:.1f}" fill="#9fe7dc" opacity="{0.10 + 0.05 * s:.2f}"/>')
-    return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice">'
-            + "".join(p) + "</svg>")
-
-
 def _oracle_svg() -> str:
     """Obsidian with Vex circuit traces (right angles that bend like roots) and floating Oracle rings."""
     rnd = random.Random(11)
@@ -192,19 +139,110 @@ def _oracle_svg() -> str:
             + "".join(p) + "</svg>")
 
 
-_ART = {"monolith": _monolith_svg, "spire": _spire_svg, "oracle": _oracle_svg}
+def _trace_paths(seed: int = 23, n: int = 42) -> list[list[tuple[float, float]]]:
+    """Vex circuit traces: walks in from the edges with right-angle turns and the odd 45-degree bend."""
+    rnd, out = random.Random(seed), []
+    for _ in range(n):
+        edge = rnd.choice("lrtb")
+        x = {"l": 0, "r": 1600}.get(edge, rnd.uniform(0, 1600))
+        y = {"t": 0, "b": 1000}.get(edge, rnd.uniform(0, 1000))
+        dx, dy = {"l": (1, 0), "r": (-1, 0), "t": (0, 1), "b": (0, -1)}[edge]
+        pts = [(x, y)]
+        for _ in range(rnd.randint(3, 7)):
+            step = rnd.uniform(50, 180)
+            x, y = x + dx * step, y + dy * step
+            pts.append((x, y))
+            if rnd.random() < 0.35:
+                x, y = x + dx * 26 + dy * 26, y + dy * 26 + dx * 26
+                pts.append((x, y))
+            dx, dy = (dy, dx) if rnd.random() < 0.5 else (-dy, -dx)
+        out.append(pts)
+    return out
+
+
+def _d(pts) -> str:
+    return "M" + " L".join(f"{x:.0f} {y:.0f}" for x, y in pts)
+
+
+def _svg(body: str) -> str:
+    return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice">'
+            + body + "</svg>")
+
+
+def _vault_static_svg() -> str:
+    """The traces at rest: dim teal and gold lines with solder pads and end nodes, over near-black stone."""
+    p = ['<defs><radialGradient id="v" cx="0.5" cy="0.42" r="0.75"><stop offset="0" stop-color="#11181b"/>'
+         '<stop offset="1" stop-color="#07090b"/></radialGradient></defs>',
+         '<rect width="1600" height="1000" fill="url(#v)"/>']
+    for i, pts in enumerate(_trace_paths()):
+        col, op = ("#b0894f", 0.22) if i % 3 == 0 else ("#2ea596", 0.20)
+        p.append(f'<path d="{_d(pts)}" fill="none" stroke="{col}" stroke-width="1.3" opacity="{op}"/>')
+        for x, y in pts[1:-1:2]:  # solder pads at some turns
+            p.append(f'<rect x="{x - 2:.0f}" y="{y - 2:.0f}" width="4" height="4" fill="{col}" opacity="{op}"/>')
+        x, y = pts[-1]
+        p.append(f'<circle cx="{x:.0f}" cy="{y:.0f}" r="3" fill="{col}" opacity="0.5"/>')
+    return _svg("".join(p))
+
+
+WAVE_PACE = {"a": 0.10, "b": 0.13, "c": 0.17}  # share of each cycle a wave spends crossing its trace (one keyframe set each)
+
+
+def _vault_waves_html() -> str:
+    """The light, as an inline SVG layer fixed behind the page (an SVG used as a background image doesn't animate
+    reliably). On each lit trace a soft glow with a bright core travels the whole path, then waits. Every trace has
+    its own paced timer: 5-11s to cross, 30-110s between waves, already mid-schedule at load, so about three are
+    moving at any moment. CSS animation, so prefers-reduced-motion turns it off."""
+    rnd = random.Random(9)
+    head = 130  # the glow's length; both layers' heads move together from the start of the path to past its end
+    p = []
+    for i, pts in enumerate(_trace_paths()):
+        if rnd.random() > 0.5:  # about half the traces carry light
+            continue
+        col = "#f2cf8e" if i % 3 == 0 else "#c4fbf3"
+        length = sum(math.dist(a, b) for a, b in zip(pts, pts[1:]))
+        travel = min(max(length / 95, 5.0), 11.0)
+        pace = rnd.choice(list(WAVE_PACE))
+        cycle = travel / WAVE_PACE[pace]
+        delay = -rnd.uniform(0, cycle)
+        for cls, dash in (("glow", head), ("core", 46)):
+            p.append(f'<path class="{cls}" d="{_d(pts)}" stroke="{col}" style="--dash:{dash};'
+                     f'--gap:{length + head + dash + 20:.0f};--o0:{dash};--o1:{dash - length - head:.0f};'
+                     f'animation-name:vg-wave-{pace};animation-duration:{cycle:.1f}s;animation-delay:{delay:.1f}s"/>')
+    return ('<div class="vg-waves" aria-hidden="true"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice">'
+            + "".join(p) + "</svg></div>")
+
+
+WAVES_CSS = """
+.stApp { isolation: isolate; }
+[data-testid="stElementContainer"]:has(.vg-waves) { position: absolute; }
+.vg-waves { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+.vg-waves svg { width: 100%; height: 100%; display: block; }
+.vg-waves path { fill: none; stroke-linecap: round; stroke-dasharray: var(--dash) var(--gap);
+  stroke-dashoffset: var(--o0); animation-timing-function: linear; animation-iteration-count: infinite; }
+.vg-waves .glow { stroke-width: 5; opacity: .09; }
+.vg-waves .core { stroke-width: 1.6; opacity: .55; }
+""" + "".join(
+    f"@keyframes vg-wave-{k} {{ 0% {{ stroke-dashoffset: var(--o0); animation-timing-function: cubic-bezier(.45,0,.55,1); }}"
+    f" {v * 100:g}% {{ stroke-dashoffset: var(--o1); }} 100% {{ stroke-dashoffset: var(--o1); }} }}\n"
+    for k, v in WAVE_PACE.items()) + """
+@media (prefers-reduced-motion: reduce) { .vg-waves { display: none; } }
+"""
+
+
+_ART = {"vault": [_vault_static_svg], "monolith": [_monolith_svg], "oracle": [_oracle_svg]}
 
 
 # ------------------------------------------------------------------ CSS
 
-def _base_css(t: dict, art: str) -> str:
+def _base_css(t: dict, layers: list[str]) -> str:
+    art = ", ".join(f'url("{u}")' for u in layers)  # the first layer sits on top
     return f"""
 @import url('https://fonts.googleapis.com/css2?{t['fonts']}&display=swap');
 :root {{ --vg-bg:{t['bg']}; --vg-surface:{t['surface']}; --vg-border:{t['border']}; --vg-accent:{t['accent']};
   --vg-glow:{t['glow']}; --vg-ink:{t['ink']}; --vg-ink2:{t['ink2']}; --vg-muted:{t['muted']};
   --vg-up:{t['up']}; --vg-down:{t['down']}; --vg-head:{t['head']}; --vg-body:{t['body']}; --vg-num:{t['num']}; }}
-.stApp {{ background: var(--vg-bg) url("{art}") center / cover fixed no-repeat; color: var(--vg-ink);
-  font-family: var(--vg-body); }}
+.stApp {{ background-color: var(--vg-bg); background-image: {art}; background-size: cover; background-position: center;
+  background-attachment: fixed; background-repeat: no-repeat; color: var(--vg-ink); font-family: var(--vg-body); }}
 [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-testid="stBottom"] > div {{ background: transparent; }}
 [data-testid="stHeader"] {{ background: color-mix(in srgb, var(--vg-bg) 82%, transparent);
   backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-bottom: 1px solid var(--vg-border); }}
@@ -257,7 +295,7 @@ def _base_css(t: dict, art: str) -> str:
 
 
 def _theme_css(name: str, t: dict) -> str:
-    if name == "monolith":
+    if name in ("monolith", "vault"):
         return """
 .vg-hero, .vg-card, .st-key-vg_chart, .vg-step { background: #141a1ef2; border: 1px solid #2b343a;
   border-top: 2px solid #b0894f; border-radius: 0; }
@@ -270,26 +308,6 @@ def _theme_css(name: str, t: dict) -> str:
 .vg-section-title::before { content: "◆"; color: #b0894f; font-size: 13px; margin-right: 10px; vertical-align: 3px; }
 .vg-step-n { border-right: 1px solid #2b343a; }
 .vg-total { border-top-color: #9fe7dc; }
-"""
-    if name == "spire":
-        return """
-.vg-hero, .vg-card, .st-key-vg_chart, .vg-step {
-  background: linear-gradient(180deg, #1d272d 0%, #131a1f 100%); border: 1px solid #2c3940; border-radius: 4px;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.07), inset 0 -1px 0 rgba(0,0,0,.6), 0 7px 0 -1px #0b1013,
-    0 7px 0 0 #2c3940, 0 22px 34px rgba(0,0,0,.6); }
-.vg-hero { background: linear-gradient(180deg, #222e35 0%, #121a1f 70%); border-radius: 6px;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.10), 0 12px 0 -1px #0a0e11, 0 12px 0 0 #34434a,
-    0 34px 60px rgba(0,0,0,.7), 0 0 80px rgba(159,231,220,.06); }
-.vg-hero::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 45%;
-  background: linear-gradient(180deg, rgba(191,243,236,.07), transparent); pointer-events: none; }
-.vg-hero-value { text-shadow: 0 2px 0 #0a0e11, 0 4px 0 #0a0e11, 0 18px 30px rgba(0,0,0,.6); }
-.vg-chip { background: linear-gradient(180deg, #243038, #182126); border-color: #34434a; border-radius: 3px;
-  box-shadow: 0 3px 0 #0a0e11; }
-.vg-section-title { text-shadow: 0 2px 0 #000, 0 0 18px rgba(159,231,220,.12); }
-.vg-card { transition: transform .15s; }
-.vg-step-n { width: 40px; height: 40px; line-height: 40px; margin: 0 auto; border-radius: 3px;
-  background: linear-gradient(180deg, #2a363d, #172025); box-shadow: 0 3px 0 #0a0e11; }
-.vg-total { background: linear-gradient(180deg, #213036 0%, #12201f 100%); }
 """
     return """
 .vg-hero, .vg-card, .st-key-vg_chart, .vg-step { position: relative; background: rgba(10,20,22,.58);
@@ -327,7 +345,10 @@ def apply(name: str) -> None:
     """Inject the theme (fonts, background, component styles) for this run."""
     st.session_state[KEY] = name
     t = THEMES[name]
-    st.html(f"<style>{_base_css(t, _b64(_ART[name]()))}{_theme_css(name, t)}</style>")
+    st.html(f"<style>{_base_css(t, [_b64(make()) for make in _ART[name]])}{_theme_css(name, t)}"
+            f"{WAVES_CSS if name == 'vault' else ''}</style>")
+    if name == "vault":  # the living circuits: an inline layer behind the page (st.html strips inline SVG)
+        st.markdown(_vault_waves_html(), unsafe_allow_html=True)
 
 
 # ------------------------------------------------------------------ components

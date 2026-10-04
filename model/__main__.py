@@ -58,7 +58,7 @@ def show_levers(st: state.State, lv: levers.Levers, rate: float) -> None:
     print(f"  3 Common     {lv.common_weekly_pct:.2%} of FD shares / week, sold at the market mNAV ({mn})")
     kd = (f"k {valuation.implied_k(st):.2f}x (today's price) -> {lv.growth_multiple:g}x by {lv.k_glide_to}"
           if lv.k_glide else f"k {lv.growth_multiple:g}x")
-    print(f"  4 Valuation  price target {lv.pt_date} = (NTAV + k x the year's BTC $ Gain) / FD shares (TD Cowen) · {kd} "
+    print(f"  4 Valuation  price target {lv.pt_date} = (NTAV + k x the year's BTC $ Gain) / FD shares · {kd} "
           f"· table k {lv.k_table[0]:g}x-{lv.k_table[-1]:g}x")
     print(f"  Warrants     {lv.warrant_exercise:.0%} of {st.warrants / 1e6:.2f}M at ${lv.warrant_strike:g} on "
           f"{lv.warrant_date} if ASST > strike · burn {usd(lv.net_cash_burn_weekly_usd)}/week · forecast to {lv.horizon_end}")

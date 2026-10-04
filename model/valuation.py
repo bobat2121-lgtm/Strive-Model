@@ -1,6 +1,6 @@
-"""Valuation on top of the engine: TD Cowen's price target, the k x BTC CAGR table, and the attribution.
+"""Valuation on top of the engine: the price target, the k x BTC CAGR table, and the attribution.
 
-Price target (TD Cowen's method, which reproduces their $44 on ASST from their published inputs):
+Price target (the BTC-earnings method; it reproduces a published $44 sell-side target on ASST from its inputs):
 
     PT_T = [ NTAV_T + k x BTC $ Gain over the fiscal year ending at T ] / FD shares_T
     BTC $ Gain = BTC Gain x BTC price_T;  BTC Gain = BTC held at the start of the year x BTC Yield for the year
@@ -20,7 +20,7 @@ reported alongside as a reference.
 
 FY2026 starts before the forecast, so it's stitched from Strive's actual history: the yield is measured from the
 actual 12/31/25 BTC per share (Strive's own convention), and the BTC Gain base includes the 5,048.1 BTC from the
-Semler merger (1/16/26), which is how TD Cowen's FY26 figure reconciles.
+Semler merger (1/16/26), which is how the published FY26 figure reconciles.
 
 Attribution ($ per share, adds up exactly):
     NTAV today -> BTC move -> amplification -> SATA dividends -> issuance -> op costs -> NTAV at T
@@ -50,7 +50,7 @@ SEMLER_CLOSE = date(2026, 1, 16)
 
 
 def value_per_share(ntav_total: float, btc_gain: float, btc_price: float, fd_shares: float, k: float) -> float:
-    """TD Cowen's equity value per share: (NTAV + k x BTC Gain x BTC price) / FD shares."""
+    """Equity value per share: (NTAV + k x BTC Gain x BTC price) / FD shares."""
     return (ntav_total + k * btc_gain * btc_price) / fd_shares
 
 

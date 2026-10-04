@@ -21,7 +21,7 @@ pt, p0 = v["price_target"], stt.share_price
 # ------------------------------------------------------------------ hero: the price target
 theme.hero(
     f"Price target · {T:%b %d, %Y}", f"${pt:,.2f}",
-    f"<b>{pt / p0 - 1:+.0%}</b> vs ${p0:,.2f} today · TD Cowen's method",
+    f"<b>{pt / p0 - 1:+.0%}</b> vs ${p0:,.2f} today",
     [("Implied mNAV", f"{v['implied_mnav']:.2f}×"), ("Growth multiple k", f"{v['k']:.2f}×"),
      ("BTC at target", f"${r.btc_price:,.0f}"), (f"{T.year} BTC Yield", f"{v['btc_yield']:.0%}"),
      ("Base case", f"{lv.base_cagr * 100:g}% BTC CAGR")])
@@ -56,7 +56,7 @@ year, base_btc = T.year, (v["btc_gain"] / v["btc_yield"] if v["btc_yield"] else 
 cash_sec, ntav_total = r.cash + stt.securities, r.ntav_per_share * r.fd_shares
 split = ("" if v["premium_sata"] is None else
          f" · ${v['premium_sata']:,.2f} from SATA-funded bitcoin, ${v['premium_common']:,.2f} from common-funded")
-theme.section("How the price target is built", "TD Cowen's method: (NTAV + k × the year's BTC $ Gain) ÷ diluted shares")
+theme.section("How the price target is built", "(NTAV + k × the year's BTC $ Gain) ÷ diluted shares")
 theme.ledger([
     {"n": "I", "title": f"What common owns · {T:%b %d, %Y}", "label": "NTAV per share",
      "math": f"{r.btc:,.0f} BTC × ${r.btc_price:,.0f} + {common.usd(cash_sec)} cash & STRC − "

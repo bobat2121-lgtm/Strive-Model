@@ -19,9 +19,9 @@ sata:                         # SATA is always sold at $100 par
 common:
   weekly_pct: 0.5             # new shares per week as % of FD shares. 6-week avg 1.86% (front-loaded); last 3 weeks ~0.5%
 
-valuation:                    # TD Cowen's method: price target = (NTAV + k x the year's BTC $ Gain) / FD shares
+valuation:                    # BTC-earnings method: price target = (NTAV + k x the year's BTC $ Gain) / FD shares
   price_target_date: 2028-12-31
-  growth_multiple: 3          # k at the end of the glide. TD Cowen uses 3x on ASST
+  growth_multiple: 3          # k at the end of the glide (3x)
   glide_from_today: true      # start k at what today's price implies (~3.4x on Strive's trailing 12 months)
   glide_to: 2028-12-31        # ... and glide in a straight line to growth_multiple by this date, then hold
   table: [1, 2, 3, 4, 5]      # rows of the price-target table (k)

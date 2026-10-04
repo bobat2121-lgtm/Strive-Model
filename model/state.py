@@ -27,7 +27,7 @@ class State:
     warrants: float           # traditional (PIPE) warrants outstanding
     strive_ev_mnav: float | None = None  # the API's evMnav for price_date (EV / BTC NAV), a cross-check
     sources: dict = field(default_factory=dict)
-    history: dict = field(default_factory=dict)  # actual {fy_start, year_ago}: {date, btc, fd_shares}, for TD Cowen's
+    history: dict = field(default_factory=dict)  # actual {fy_start, year_ago}: {date, btc, fd_shares}, for the year's
                                                  # BTC Yield (FY2026 starts before the forecast) and the implied k
 
     def with_prices(self, btc_price: float | None = None, share_price: float | None = None,

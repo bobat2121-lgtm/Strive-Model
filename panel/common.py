@@ -143,8 +143,7 @@ def sidebar(st_: state.State) -> levers.Levers:
                                  "throughout.")
         k = st.number_input("k (× the year's BTC $ Gain)" + (", at the end of the glide" if k_glide else ""),
                             min_value=0.0, value=d.growth_multiple, step=0.25, format="%.2f",
-                            help="TD Cowen's method: price target = (NTAV + k × the year's BTC $ Gain) ÷ diluted "
-                                 "shares. TD Cowen uses 3x.")
+                            help="Price target = (NTAV + k × the year's BTC $ Gain) ÷ diluted shares.")
         k_by = st.date_input("k reaches it by", value=d.k_glide_to, disabled=not k_glide)
         rows = _floats(st.text_input("Price-target table rows (k at the end of the glide)",
                                      ", ".join(f"{x:g}" for x in d.k_table)), d.k_table)

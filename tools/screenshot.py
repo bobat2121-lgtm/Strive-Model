@@ -1,8 +1,11 @@
 """Screenshots of the running app for design reviews: headless Edge driven over the DevTools protocol (Streamlit draws
 over a websocket, so a plain --screenshot fires before anything renders).
 
-    .venv\\Scripts\\python tools\\screenshot.py http://localhost:8521/?theme=spire renderings/spire 0 900 1700
-writes renderings/spire-1.png, -2.png, ... at a 1440x900 viewport, scrolled to each offset given (px).
+    .venv\\Scripts\\python tools\\screenshot.py http://localhost:8521/?theme=vault renderings/vault 0 760 1500
+writes renderings/vault-1.png, -2.png, ... at a 1440x900 viewport, scrolled to each offset given (px).
+
+    .venv\\Scripts\\python tools\\screenshot.py http://localhost:8521/ renderings/vault.gif 12
+records 12 seconds at the top of the page as an animated GIF (to show motion).
 """
 from __future__ import annotations
 
@@ -24,7 +27,8 @@ SCROLLER = ("[...document.querySelectorAll('*')].find(e => e.scrollHeight > e.cl
             "['auto','scroll'].includes(getComputedStyle(e).overflowY) && e.clientWidth > 600)")
 
 
-async def shoot(url: str, prefix: str, offsets: list[int], width: int = 1440, height: int = 900, wait: int = 16):
+async def shoot(url: str, prefix: str, offsets: list[int], width: int = 1440, height: int = 900, wait: int = 16,
+                record: float = 0.0, fps: int = 6, scale: float = 0.6):
     proc = subprocess.Popen([EDGE, "--headless=new", f"--remote-debugging-port={PORT}", "--hide-scrollbars",
                              f"--user-data-dir={tempfile.mkdtemp()}", "about:blank"],
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -51,6 +55,20 @@ async def shoot(url: str, prefix: str, offsets: list[int], width: int = 1440, he
                    {"width": width, "height": height, "deviceScaleFactor": 1, "mobile": False})
         await call("Page.navigate", {"url": url})
         await asyncio.sleep(wait)
+        if record:
+            from io import BytesIO
+            from PIL import Image
+            frames, t_end = [], time.time() + record
+            while time.time() < t_end:
+                t0 = time.time()
+                img = await call("Page.captureScreenshot", {"format": "jpeg", "quality": 85})
+                im = Image.open(BytesIO(base64.b64decode(img["data"]))).convert("RGB")
+                frames.append(im.resize((int(width * scale), int(height * scale)), Image.LANCZOS))
+                await asyncio.sleep(max(0.0, 1 / fps - (time.time() - t0)))
+            frames[0].save(prefix, save_all=True, append_images=frames[1:], duration=int(1000 / fps), loop=0,
+                           optimize=True)
+            print(prefix, f"({len(frames)} frames)")
+            offsets = []
         for i, y in enumerate(offsets, 1):
             await call("Runtime.evaluate", {"expression": f"(() => {{ const s = {SCROLLER}; if (s) s.scrollTo(0, {y}); "
                                                           f"else window.scrollTo(0, {y}); }})()"})
@@ -66,4 +84,8 @@ async def shoot(url: str, prefix: str, offsets: list[int], width: int = 1440, he
 
 
 if __name__ == "__main__":
-    asyncio.run(shoot(sys.argv[1], sys.argv[2], [int(x) for x in sys.argv[3:]] or [0]))
+    url, out, rest = sys.argv[1], sys.argv[2], sys.argv[3:]
+    if out.endswith(".gif"):
+        asyncio.run(shoot(url, out, [], record=float(rest[0]) if rest else 10.0))
+    else:
+        asyncio.run(shoot(url, out, [int(x) for x in rest] or [0]))

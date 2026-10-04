@@ -12,7 +12,7 @@
 
 | Firm | Analyst | Rating | PT (date) | Method (as reported) |
 |---|---|---|---|---|
-| TD Cowen | Lance Vitanza | Buy | **$44** (Sep 21) | BTC NAV net of claims, plus **k × FY BTC $ Gain**. k was 2× at initiation and 3× from Aug. Uses a forward year-end BTC price ($97.5k YE26) and forecasts **32,105 BTC** at YE26 with a 70.1% FY26 BTC Yield. |
+| Sell-side firm A | — | Buy | **$44** (Sep 21) | BTC NAV net of claims, plus **k × FY BTC $ Gain**. k was 2× at initiation and 3× from Aug. Uses a forward year-end BTC price ($97.5k YE26) and forecasts **32,105 BTC** at YE26 with a 70.1% FY26 BTC Yield. |
 | H.C. Wainwright | Mike Colonnese | Buy | **$36** (Aug 11) | **Target mNAV (1.75×)** applied to the forward YE26 BTC NAV (May: 18,017 BTC × $150k). Then adjusts for YE preferred, cash and STRC, and divides by FD shares. |
 | B. Riley | Fedor Shabalin | Buy | **$33** (Sep 22) | **mNAV multiple** (1.1× at initiation). NAV includes the asset-management business, which makes it the only firm that values it. |
 | Benchmark / StoneX | Mark Palmer | Buy | **$32** (Jun 2) | No ASST math published. His MSTR and Metaplanet models are a SOTP: YE BTC value + a multiple of FY BTC $ Gain + the operating business. |
@@ -42,12 +42,12 @@ PT = [ B_YE × P_fwd × (premium)  −  SATA_YE  −  Debt  +  Cash/STRC  (+ k �
 | Toggle | Options | Who does what |
 |---|---|---|
 | BTC price | spot / 12-month forward / YE forecast | Everyone uses a forward price ($97.5k–$150k) |
-| Premium | fixed × gross NAV / fixed × net NAV / k × BTC $ Gain | HCW fixed; TD Cowen k × Gain |
-| SATA | deducted / not deducted | HCW and TD Cowen deduct; Maxim does not |
+| Premium | fixed × gross NAV / fixed × net NAV / k × BTC $ Gain | HCW fixed; firm A k × Gain |
+| SATA | deducted / not deducted | HCW and firm A deduct; Maxim does not |
 | Share base | basic / assumed FD / FD + warrants | Street uses Strive's assumed FD, which excludes the warrants |
 | Asset-management business | included / excluded | B. Riley only |
 
-### Worked check: reconstructing TD Cowen's $44 *(my reconstruction, not confirmed)*
+### Worked check: reconstructing the published $44 *(my reconstruction, not confirmed)*
 
 - YE26 NAV = 32,105 × $97.5k = $3.13B.
 - FY26 BTC Gain = 70.1% × ~12,675 BTC (start-of-year holdings pro forma for Semler) ≈ 8,885 BTC, which is $866M at $97.5k.
@@ -104,7 +104,7 @@ Don't pick one analyst's method. Build **one projection engine and one valuation
 **Make Net BPS the core unit.**
 - It handles SATA correctly.
 - It is where Strategy moved in July 2026.
-- The TD Cowen form reduces to it: PT = NetBPS + k · Y · (B₀/B) · GrossBPS.
+- The BTC-earnings form reduces to it: PT = NetBPS + k · Y · (B₀/B) · GrossBPS.
 
 Every lens becomes "Net BPS plus a justified premium," so the lenses can be compared directly.
 
@@ -243,7 +243,7 @@ Strive Model/
 
 - [Strive 8-K, Sep 28 2026 (weekly table)](https://www.sec.gov/Archives/edgar/data/0001920406/000162828026063653/asst-20260928.htm)
 - [Strive Q2-26 10-Q](https://www.sec.gov/Archives/edgar/data/1920406/000162828026054985/asst-20260630.htm) · [Q2-26 earnings release](https://www.sec.gov/Archives/edgar/data/1920406/000162828026054984/striveincq22026earningsrel.htm) · [8-K Jul 6 (KPI table)](https://www.sec.gov/Archives/edgar/data/1920406/000162828026047102/asst-20260706.htm)
-- [TD Cowen ASST, Aug 31 (The Block)](https://www.theblock.co/news/business/2026-08-31-strive-fifth-largest-public-bitcoin-treasury-1800-btc-buy-td-cowen-lifts-asst-price-target-413112) · [Sep 21 (The Block)](https://www.theblock.co/news/markets/2026-09-21-strive-adds-1355-bitcoin-picks-up-pace-year-end-second-place-treasury-goal-415940) · [TD Cowen MSTR formula (The Block)](https://www.theblock.co/post/401824/td-cowen-raises-strategy-price-target-to-400-citing-faster-bitcoin-accumulation-and-accretive-deleveraging)
+- [Strive adds 1,355 BTC, Sep 21 (The Block)](https://www.theblock.co/news/markets/2026-09-21-strive-adds-1355-bitcoin-picks-up-pace-year-end-second-place-treasury-goal-415940)
 - [H.C. Wainwright method (Investing.com)](https://ca.investing.com/news/stock-market-news/hc-wainwright-lowers-strive-enterprises-stock-price-target-to-36-93CH-4643202) · [B. Riley initiation (Investing.com)](https://www.investing.com/news/analyst-ratings/briley-initiates-strive-enterprises-stock-with-buy-rating-93CH-4551236) · [Maxim cut (Yahoo)](https://finance.yahoo.com/markets/stocks/articles/maxim-lowers-price-target-strive-073001737.html) · [Benchmark initiation (Investing.com)](https://www.investing.com/news/analyst-ratings/benchmark-initiates-strive-enterprises-stock-with-buy-on-bitcoin-strategy-93CH-4722283)
 - [Strategy mNAV redefinition FWP, Aug 2026](https://www.sec.gov/Archives/edgar/data/0001050446/000119312526363557/d431748dfwp.htm) · [STRC Investor Briefing (credit-model definitions)](https://assets.contentstack.io/v3/assets/bltf8d808d9b8cebd37/blt23d718fe5cf3132e/6aa742d1f08d251ec0991faf/STRC_Investor_Briefing_As_of_2026-09-13.pdf)
 - [StockAnalysis ASST forecast](https://stockanalysis.com/stocks/asst/forecast/) · [MarketBeat](https://www.marketbeat.com/stocks/NASDAQ/ASST/forecast/) · [warrant expiry report (KuCoin)](https://www.kucoin.com/news/flash/strive-extends-exercise-deadline-for-718m-pipe-warrants-to-october-13)
@@ -304,8 +304,8 @@ Strive Model/
 
 **Valuation (decided 2026-10-04, after the user audited why more SATA barely moved the YE28 price):**
 - **Problem:** price = mNAV × NTAV doesn't pay for future growth. SATA adds nothing the day it's sold, and most of the extra SATA arrives late.
-- **Price target, dated YE2028 (TD Cowen's structure):** PT = NTAV/share + k × the next year's **net** gain per share. Net gain = growth in net BTC per share (NTAV / BTC price), valued at the date's BTC price.
-- **Defaults:** k = 3x (TD Cowen's); today's price implies about 1.5x. Gross gain (Strive's BTC Yield) is an option, but it counts SATA-funded BTC and inflates high-SATA cases.
+- **Price target, dated YE2028 (the BTC-earnings structure):** PT = NTAV/share + k × the next year's **net** gain per share. Net gain = growth in net BTC per share (NTAV / BTC price), valued at the date's BTC price.
+- **Defaults:** k = 3x ; today's price implies about 1.5x. Gross gain (Strive's BTC Yield) is an option, but it counts SATA-funded BTC and inflates high-SATA cases.
 - **Horizon:** the forecast now runs to 2031-12-31 so the target's forward year exists.
 - **Market mNAV glide:** kept. It sets the price new common sells at.
 - **Cash reserve:** the 18-month policy holds.
@@ -323,9 +323,9 @@ Strive Model/
 - Result: SATA reaches $13.4B at YE28 and $62B at YE31. Base YE28 target ≈ $178 (implied 1.88×).
 - Amplification drifts down after 2027 (42% at YE28, 15% at YE31) because common issuance outgrows SATA.
 
-**Valuation switched to TD Cowen's method (2026-10-04, approved by the user):**
+**Valuation switched to the BTC-earnings method (2026-10-04, approved by the user):**
 - PT = (NTAV + k × the year's BTC $ Gain) / FD shares. BTC $ Gain = start-of-year BTC × BTC Yield × year-end BTC price, gross, over the year ending at the target. k = 3.
-- It reproduces TD Cowen's $44 (calculated $43.55). Today's price implies 3.37× on Strive's actual trailing 12 months.
+- It reproduces the published $44 (calculated $43.55). Today's price implies 3.37× on Strive's actual trailing 12 months.
 - FY26 is stitched from history: the yield runs from actual 12/31/25 sats per share (17,037), and the gain base includes Semler's 5,048.1 BTC.
 - The year-after window and the net/gross selector were removed for simplicity.
 - The premium is split into SATA-funded and common-funded parts, and a net-basis value is shown as a reference.

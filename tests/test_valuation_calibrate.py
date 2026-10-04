@@ -7,8 +7,8 @@ from model import calibrate, engine, metrics, valuation
 from model.sources.filings import weeks_from_feed
 
 
-def test_reproduces_td_cowens_44():
-    # TD Cowen, Sep 21 2026: 32,105 BTC at YE26 x $97.5k, less ~$1.64B SATA plus ~$0.30B cash, plus 3x the FY26
+def test_reproduces_the_published_44_target():
+    # A published sell-side target, Sep 21 2026: 32,105 BTC at YE26 x $97.5k, less ~$1.64B SATA plus ~$0.30B cash, plus 3x the FY26
     # BTC $ Gain (70.1% BTC Yield on the ~12,675 BTC start incl. Semler's), over today's 100.78M FD shares -> $44
     v = valuation.value_per_share(32105 * 97500 - 1.64e9 + 0.30e9, 12675 * 0.701, 97500, 100776795, 3)
     assert round(v, 2) == 43.55

@@ -10,12 +10,12 @@ values ASST with the multiple Strive itself publishes. A Streamlit app puts the 
    Each raise first tops the cash dividend reserve back up to 18 months; the rest buys BTC.
    The dividend rate holds at 13% (Strive's current rate), or glides in a straight line to a target rate by a date you pick.
 3. **Common**: new shares each week as a % of fully diluted shares, sold at the modeled price.
-4. **Price target** (TD Cowen's method), dated 12/31/2028:
+4. **Price target** (BTC-earnings method), dated 12/31/2028:
    ```
    PT = (NTAV + k x the year's BTC $ Gain) / diluted shares
    ```
    - **BTC $ Gain** = BTC held at the start of the year × BTC Yield × the year-end BTC price.
-   - **k** starts at what today's price implies (about 3.4x on Strive's actual trailing 12 months) and glides in a straight line to your k (default 3x, TD Cowen's) by a date (default the target date). You can also turn the glide off.
+   - **k** starts at what today's price implies (about 3.4x on Strive's actual trailing 12 months) and glides in a straight line to your k (default 3x) by a date (default the target date). You can also turn the glide off.
    - The forecast runs to 2031.
 5. **Market mNAV**: Strive's "Multiple to Net Treasury Asset Value", i.e. ASST price ÷ NTAV per diluted share (2.13x on 10/4/26). During the forecast it sets the price new common sells at.
    - **Default, "Follow the model's valuation":** the model solves for a path where the market multiple at each year end equals the price target's implied mNAV, so shares sell at what the model says they're worth.
@@ -31,7 +31,7 @@ values ASST with the multiple Strive itself publishes. A Streamlit app puts the 
 NTAV per share = (BTC x BTC price + cash + STRC - debt - SATA liquidation preference) / assumed fully diluted shares
 BTC Yield      = growth in BTC per diluted share over the year (Strive's KPI)
 BTC $ Gain     = BTC held at the start of the year x BTC Yield x year-end BTC price
-Price target   = (NTAV + k x BTC $ Gain) / diluted shares          (TD Cowen; reproduces their $44 on ASST)
+Price target   = (NTAV + k x BTC $ Gain) / diluted shares          (reproduces a published $44 sell-side target on ASST)
 Market price   = market mNAV x NTAV per share   (the price new common sells at during the forecast)
 ```
 

@@ -28,9 +28,9 @@ class Levers:
     reserve_months: float = 18.0             # months of SATA dividends Strive keeps in cash
     # 3) Common: new shares each week as a fraction of FD shares, sold at the modeled price
     common_weekly_pct: float = 0.005
-    # 4) Valuation, TD Cowen's method: price target = (NTAV + k x the year's BTC $ Gain) / FD shares
+    # 4) Valuation, BTC-earnings method: price target = (NTAV + k x the year's BTC $ Gain) / FD shares
     pt_date: date = date(2028, 12, 31)
-    growth_multiple: float = 3.0             # k at the end of the glide (TD Cowen: 3x on ASST)
+    growth_multiple: float = 3.0             # k at the end of the glide
     k_glide: bool = True                     # start k at what today's price implies and glide to growth_multiple
     k_glide_to: date = date(2028, 12, 31)
     k_table: list[float] = field(default_factory=lambda: [1.0, 2.0, 3.0, 4.0, 5.0])
