@@ -311,6 +311,14 @@ Strive Model/
 - **Cash reserve:** the 18-month policy holds.
 - **Base case:** PT ≈ $241, an implied 2.53x.
 
+**Valuation switched to TD Cowen's method (2026-10-04, approved by the user):**
+- PT = (NTAV + k × the year's BTC $ Gain) / FD shares. BTC $ Gain = start-of-year BTC × BTC Yield × year-end BTC price, gross, over the year ending at the target. k = 3.
+- It reproduces TD Cowen's $44 (calculated $43.55). Today's price implies 3.37× on Strive's actual trailing 12 months.
+- FY26 is stitched from history: the yield runs from actual 12/31/25 sats per share (17,037), and the gain base includes Semler's 5,048.1 BTC.
+- The year-after window and the net/gross selector were removed for simplicity.
+- The premium is split into SATA-funded and common-funded parts, and a net-basis value is shown as a reference.
+- Base case YE28 ≈ $223, an implied 2.34×.
+
 **Dividends and the rate (2026-10-04):**
 - "Op. costs" is the net cash burn only.
 - SATA dividends are their own attribution step, about −$14 a share by YE28 in the base case.

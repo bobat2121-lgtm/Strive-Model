@@ -7,12 +7,47 @@ from model import calibrate, engine, metrics, valuation
 from model.sources.filings import weeks_from_feed
 
 
+def test_reproduces_td_cowens_44():
+    # TD Cowen, Sep 21 2026: 32,105 BTC at YE26 x $97.5k, less ~$1.64B SATA plus ~$0.30B cash, plus 3x the FY26
+    # BTC $ Gain (70.1% BTC Yield on the ~12,675 BTC start incl. Semler's), over today's 100.78M FD shares -> $44
+    v = valuation.value_per_share(32105 * 97500 - 1.64e9 + 0.30e9, 12675 * 0.701, 97500, 100776795, 3)
+    assert round(v, 2) == 43.55
+
+
+def test_implied_k_on_the_actual_trailing_twelve_months(st):
+    # 9/30/25 -> 9/25/26: 5,886 BTC, sats per share 13,945 -> 27,250 (95% BTC Yield), ~$4.75 a share at $85,225
+    assert round(valuation.implied_k(st), 2) == 3.36
+
+
+def test_price_target_by_hand(st, lv):
+    df = engine.run(st, lv, 0.40)
+    a, b = engine.at(df, date(2027, 12, 31)), engine.at(df, date(2028, 12, 31))
+    y = b.sats_per_share / a.sats_per_share - 1
+    v = valuation.price_target(df, st, date(2028, 12, 31), lv)
+    assert v["btc_yield"] == pytest.approx(y)
+    assert v["price_target"] == pytest.approx(b.ntav_per_share + 3 * a.btc * y * b.btc_price / b.fd_shares)
+    assert v["premium_sata"] + v["premium_common"] == pytest.approx(v["growth_premium"])
+
+
+def test_fy2026_is_stitched_from_history_with_semler(st, lv):
+    df = engine.run(st, lv, 0.40)
+    v = valuation.price_target(df, st, date(2026, 12, 31), lv)
+    h = st.history["fy_start"]
+    sats0 = h["btc"] / h["fd_shares"] * 1e8                       # 17,037 sats: Strive's own Q1-26 starting point
+    y = engine.at(df, date(2026, 12, 31)).sats_per_share / sats0 - 1
+    assert round(sats0) == 17037 and v["btc_yield"] == pytest.approx(y)
+    assert v["btc_gain"] == pytest.approx((h["btc"] + valuation.SEMLER_BTC) * y)
+    assert v["premium_sata"] is None and v["net_target"] is None  # the year starts before the forecast
+
+
 def test_attribution_adds_up_to_the_price_target(st, lv):
     a = valuation.attribution(st, lv, 0.40)
     assert (a["start"] + a[valuation.PARTS].sum(axis=1) - a["end"]).abs().max() < 1e-9
     steps = ["btc_move", "amplification", "sata_dividends", "issuance", "op_costs"]
     assert (a["start"] + a[steps].sum(axis=1) - a["ntav_end"]).abs().max() < 1e-9
-    assert list(a.index) == [date(y, 12, 31) for y in range(2026, 2031)]  # each needs a forward year inside the forecast
+    split = a.dropna(subset=["premium_sata"])
+    assert (split["premium_sata"] + split["premium_common"] - split["growth_premium"]).abs().max() < 1e-9
+    assert list(a.index) == [date(y, 12, 31) for y in range(2026, 2032)]
     assert a["start"].iloc[0] == pytest.approx(metrics.ntav_per_share(st))
     assert a["today_price"].iloc[0] == pytest.approx(30.03)
 
@@ -32,30 +67,10 @@ def test_btc_move_is_net_assets_tracking_btc(st, lv):
     assert a.loc[date(2027, 12, 31), "btc_move"] == pytest.approx(n0 * (140_000 / st.btc_price - 1))
 
 
-def test_price_target_by_hand(st, lv):
-    df = engine.run(st, lv, 0.40)
-    t, t1 = date(2028, 12, 31), date(2029, 12, 31)
-    a, b = engine.at(df, t), engine.at(df, t1)
-    net_y = (b.ntav_per_share / b.btc_price) / (a.ntav_per_share / a.btc_price) - 1
-    v = valuation.price_target(df, t, lv)
-    assert v["forward_yield"] == pytest.approx(net_y)
-    assert v["price_target"] == pytest.approx(a.ntav_per_share * (1 + 3 * net_y))
-    gross = valuation.price_target(df, t, replace(lv, gain_basis="gross"))
-    gross_y = b.sats_per_share / a.sats_per_share - 1
-    assert gross["price_target"] == pytest.approx(a.ntav_per_share + 3 * a.btc * gross_y * a.btc_price / a.fd_shares)
-
-
-def test_implied_k_reprices_today(st, lv):
-    df = engine.run(st, lv, 0.40)
-    k = valuation.implied_k(df, lv)
-    _, g = valuation.forward_gain(df, st.price_date)
-    assert metrics.ntav_per_share(st) + k * g == pytest.approx(30.03)
-
-
-def test_more_amplification_raises_the_target(st, lv):
-    lo = valuation.price_target(engine.run(st, replace(lv, sata_pct_of_btc_nav=None), 0.4), lv.pt_date, lv)
-    hi = valuation.price_target(engine.run(st, replace(lv, sata_pct_of_btc_nav=0.015), 0.4), lv.pt_date, lv)
-    assert hi["amplification"] > lo["amplification"] and hi["price_target"] > lo["price_target"] * 1.3
+def test_more_sata_raises_the_target_and_its_sata_premium(st, lv):
+    lo = valuation.price_target(engine.run(st, replace(lv, sata_pct_of_btc_nav=None), 0.4), st, lv.pt_date, lv)
+    hi = valuation.price_target(engine.run(st, replace(lv, sata_pct_of_btc_nav=0.015), 0.4), st, lv.pt_date, lv)
+    assert hi["price_target"] > lo["price_target"] * 1.5 and hi["premium_sata"] > lo["premium_sata"]
 
 
 def test_price_target_table_rises_with_k_and_cagr(st, lv):
@@ -64,7 +79,7 @@ def test_price_target_table_rises_with_k_and_cagr(st, lv):
     assert (body.diff().iloc[1:] > 0).all().all()       # higher k, higher target
     assert (body.T.diff().iloc[1:] > 0).all().all()     # higher CAGR, higher target
     assert t["price_target"].index[0] == f"{t['k_today']:.2f}x (today's price)"
-    base = valuation.price_target(engine.run(st, lv, 0.40), lv.pt_date, lv)["price_target"]
+    base = valuation.price_target(engine.run(st, lv, 0.40), st, lv.pt_date, lv)["price_target"]
     assert t["price_target"].loc["3x", "40% CAGR"] == pytest.approx(base)
 
 

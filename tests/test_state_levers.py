@@ -14,6 +14,9 @@ def test_snapshot_from_strive_payloads(calc, base):
     assert s.sata_notional == 1219318000 and s.sata_rate == 0.13
     assert (s.cash, s.securities, s.debt) == (248800000, 49763000, 0)
     assert s.warrants == 25349806
+    fy, ya = s.history["fy_start"], s.history["year_ago"]
+    assert (fy["date"], round(fy["btc"], 2), fy["fd_shares"]) == (date(2025, 12, 31), 7626.81, 44766899)
+    assert (ya["date"], round(ya["btc"])) == (date(2025, 9, 30), 5886)
 
 
 def test_snapshot_needs_priced_rows(calc, base):

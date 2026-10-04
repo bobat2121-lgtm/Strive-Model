@@ -24,8 +24,8 @@ def defaults() -> levers.Levers:
 def compute(st_: state.State, lv: levers.Levers) -> dict:
     path = engine.run(st_, lv, lv.base_cagr, lv.mnav_target)
     return {"table": valuation.table(st_, lv), "attribution": valuation.attribution(st_, lv, lv.base_cagr),
-            "path": path, "implied_k": valuation.implied_k(path, lv),
-            "values": {d: valuation.price_target(path, d, lv) for d in valuation.valuation_dates(st_, lv)}}
+            "path": path, "implied_k": valuation.implied_k(st_),
+            "values": {d: valuation.price_target(path, st_, d, lv) for d in valuation.valuation_dates(st_, lv)}}
 
 
 def current_state() -> state.State:
@@ -62,12 +62,9 @@ def mnav_label(lv: levers.Levers, m0: float) -> str:
 
 
 def rate_label(lv: levers.Levers, rate_now: float) -> str:
-    return f"at a static {rate_now:.2%}" if lv.sata_rate_target is None else         f"at {rate_now:.2%} gliding to {lv.sata_rate_target:.2%} by {lv.sata_rate_glide_to:%b %d, %Y}"
-
-
-def gain_label(lv: levers.Levers) -> str:
-    return "net gain (the part that belongs to common)" if lv.gain_basis == "net" else \
-        "gross gain (Strive's BTC Yield)"
+    if lv.sata_rate_target is None:
+        return f"at a static {rate_now:.2%}"
+    return f"at {rate_now:.2%} gliding to {lv.sata_rate_target:.2%} by {lv.sata_rate_glide_to:%b %d, %Y}"
 
 
 # ------------------------------------------------------------------ chart colors (validated: dataviz validate_palette.js)
@@ -139,16 +136,10 @@ def sidebar(st_: state.State) -> levers.Levers:
         dates = valuation.valuation_dates(st_, d)
         pt_date = st.selectbox("Target date", dates, index=dates.index(d.pt_date) if d.pt_date in dates else 0,
                                format_func=lambda x: f"{x:%b %d, %Y}")
-        k = st.number_input("Growth multiple k (× next year's gain)", min_value=0.0, value=d.growth_multiple,
+        k = st.number_input("Growth multiple k (× the year's BTC $ Gain)", min_value=0.0, value=d.growth_multiple,
                             step=0.25, format="%.2f",
-                            help="Price target = NTAV per share + k × the next year's gain per share (TD Cowen's "
-                                 "structure; TD Cowen uses 3x on ASST). The page shows the k today's price implies.")
-        basis = st.selectbox("Gain", ["net", "gross"], index=0 if d.gain_basis == "net" else 1,
-                             format_func=lambda b: {"net": "Net: the gain that belongs to common",
-                                                    "gross": "Gross: Strive's BTC Yield"}[b],
-                             help="Net = growth in net BTC per share (NTAV ÷ BTC price): shares sold above NTAV, plus "
-                                  "SATA leverage once BTC outruns the dividend. Gross = Strive's BTC Yield, which "
-                                  "counts BTC bought with SATA money as gain although SATA holders are owed it.")
+                            help="TD Cowen's method: price target = (NTAV + k × the year's BTC $ Gain) ÷ diluted "
+                                 "shares. TD Cowen uses 3x; the page shows the k today's price implies.")
         rows = _floats(st.text_input("Price-target table rows (k)", ", ".join(f"{x:g}" for x in d.k_table)),
                        d.k_table)
 
@@ -178,5 +169,5 @@ def sidebar(st_: state.State) -> levers.Levers:
                    sata_rate_target=rate_target / 100 if glide_rate else None, sata_rate_glide_to=rate_by,
                    sata_pct_of_btc_nav=pct / 100 if scale else None, sata_glide_weeks=float(glide),
                    common_weekly_pct=common / 100, mnav_target=None if hold else target, mnav_glide_to=glide_to,
-                   pt_date=pt_date, growth_multiple=k, gain_basis=basis, k_table=rows,
+                   pt_date=pt_date, growth_multiple=k, k_table=rows,
                    warrant_exercise=wex / 100, net_cash_burn_weekly_usd=burn * 1e6)

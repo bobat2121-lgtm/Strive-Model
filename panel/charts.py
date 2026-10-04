@@ -7,11 +7,12 @@ import pandas as pd
 
 LABELS = {"btc_move": "BTC move", "amplification": "Amplification", "sata_dividends": "SATA dividends",
           "issuance": "Issuance", "op_costs": "Op. costs", "growth_premium": "Growth premium"}
+PREMIUM = {"premium_sata": "SATA premium", "premium_common": "Common premium"}  # the growth premium, by funding
 
 
 def waterfall(row: pd.Series, when: str, c: dict) -> alt.LayerChart:
-    """NTAV today -> BTC move, amplification, issuance, op costs -> NTAV at the date -> growth premium -> price target,
-    with today's price as a reference line."""
+    """NTAV today -> BTC move, amplification, SATA dividends, issuance, op costs -> NTAV at the date -> growth premium
+    (split SATA- / common-funded) -> price target, with today's price as a reference line."""
     steps, cum = [], float(row["start"])
 
     def total(label, v):
@@ -20,7 +21,7 @@ def waterfall(row: pd.Series, when: str, c: dict) -> alt.LayerChart:
     def delta(key):
         nonlocal cum
         v = float(row[key])
-        steps.append({"label": LABELS[key], "y0": cum, "y1": cum + v, "value": v,
+        steps.append({"label": {**LABELS, **PREMIUM}[key], "y0": cum, "y1": cum + v, "value": v,
                       "kind": "Adds" if v >= 0 else "Subtracts"})
         cum += v
 
@@ -28,7 +29,9 @@ def waterfall(row: pd.Series, when: str, c: dict) -> alt.LayerChart:
     for key in ("btc_move", "amplification", "sata_dividends", "issuance", "op_costs"):
         delta(key)
     total(f"NTAV {when}", float(row["ntav_end"]))
-    delta("growth_premium")
+    cum = float(row["ntav_end"])
+    for key in (PREMIUM if pd.notna(row["premium_sata"]) else ["growth_premium"]):  # no split for a stitched year
+        delta(key)
     total("Price target", float(row["end"]))
     df = pd.DataFrame(steps)
     gain = row["end"] - row["start"]

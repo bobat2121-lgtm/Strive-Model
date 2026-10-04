@@ -30,10 +30,9 @@ class Levers:
     reserve_months: float = 18.0             # months of SATA dividends Strive keeps in cash
     # 3) Common: new shares each week as a fraction of FD shares, sold at the modeled price
     common_weekly_pct: float = 0.005
-    # 4) Valuation, TD Cowen's structure: price target = NTAV per share + k x the next year's gain per share
+    # 4) Valuation, TD Cowen's method: price target = (NTAV + k x the year's BTC $ Gain) / FD shares
     pt_date: date = date(2028, 12, 31)
-    growth_multiple: float = 3.0             # k
-    gain_basis: str = "net"                  # "net": growth in net BTC per share; "gross": Strive's BTC Yield
+    growth_multiple: float = 3.0             # k (TD Cowen: 3x on ASST)
     k_table: list[float] = field(default_factory=lambda: [1.0, 2.0, 3.0, 4.0, 5.0])
     # Market mNAV (price / NTAV per share) during the forecast: the price new common sells at. None holds today's;
     # a target glides today's multiple to it by mnav_glide_to. It doesn't enter the price target directly.
@@ -44,7 +43,7 @@ class Levers:
     warrant_exercise: float = 1.0            # fraction exercised if ASST is above the strike that week; the rest lapse
     warrant_strike: float = 27.0
     net_cash_burn_weekly_usd: float = 1_200_000.0
-    horizon_end: date = date(2031, 12, 31)    # the forecast runs past the price target so its forward year exists
+    horizon_end: date = date(2031, 12, 31)    # the forecast runs past the price target
 
 
 def _pct(x):
@@ -76,7 +75,6 @@ def load(path: Path | str = DEFAULT_PATH) -> Levers:
         mnav_glide_to=m.get("glide_to", d.mnav_glide_to),
         pt_date=val.get("price_target_date", d.pt_date),
         growth_multiple=float(val.get("growth_multiple", d.growth_multiple)),
-        gain_basis=str(val.get("gain_basis", d.gain_basis)),
         k_table=[float(x) for x in val.get("table") or d.k_table],
         warrant_date=w.get("exercise_date", d.warrant_date),
         warrant_exercise=_pct(w.get("exercise_pct", d.warrant_exercise * 100)),

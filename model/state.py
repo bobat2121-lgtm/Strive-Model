@@ -6,7 +6,7 @@ Prices are the latest day on Strive's dashboard, or live Coinbase / Yahoo prices
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
-from datetime import date
+from datetime import date, timedelta
 
 from model.sources import market, strive
 
@@ -27,11 +27,28 @@ class State:
     warrants: float           # traditional (PIPE) warrants outstanding
     strive_ev_mnav: float | None = None  # the API's evMnav for price_date (EV / BTC NAV), a cross-check
     sources: dict = field(default_factory=dict)
+    history: dict = field(default_factory=dict)  # actual {fy_start, year_ago}: {date, btc, fd_shares}, for TD Cowen's
+                                                 # BTC Yield (FY2026 starts before the forecast) and the implied k
 
     def with_prices(self, btc_price: float | None = None, share_price: float | None = None,
                     price_date: date | None = None) -> State:
         return replace(self, btc_price=btc_price or self.btc_price, share_price=share_price or self.share_price,
                        price_date=price_date or self.price_date, strive_ev_mnav=None)
+
+
+def _history(base: dict | None, as_of: date) -> dict:
+    """BTC held and FD shares on the share-history date nearest each target, from strive.com's ledger."""
+    rows = sorted((base or {}).get("shares") or [], key=lambda s: s["date"])
+    tx = (base or {}).get("transactions") or []
+    if not rows:
+        return {}
+
+    def point(target: date) -> dict:
+        r = min(rows, key=lambda s: abs((date.fromisoformat(s["date"]) - target).days))
+        btc = sum(t["btc_amount"] for t in tx if t["transaction_date"] <= r["date"])
+        return {"date": date.fromisoformat(r["date"]), "btc": btc, "fd_shares": float(r["fully_diluted_shares"])}
+
+    return {"fy_start": point(date(as_of.year - 1, 12, 31)), "year_ago": point(as_of - timedelta(days=365))}
 
 
 def from_payloads(calc: dict, base: dict | None, sources: dict | None = None) -> State:
@@ -42,8 +59,9 @@ def from_payloads(calc: dict, base: dict | None, sources: dict | None = None) ->
     r = rows[-1]
     sata = next((p for p in calc.get("preferredStocks") or [] if p.get("ticker") == "SATA"), {})
     shares = max((base or {}).get("shares") or [], key=lambda s: s["date"], default={})
+    as_of = date.fromisoformat(shares.get("date") or sata.get("date") or r["date"])
     return State(
-        as_of=date.fromisoformat(shares.get("date") or sata.get("date") or r["date"]),
+        as_of=as_of,
         price_date=date.fromisoformat(r["date"]),
         btc=float(r["btcHoldings"]), btc_price=float(r["btcPrice"]), share_price=float(r["sharePrice"]),
         fd_shares=float(r["sharesOutstanding"]),
@@ -51,7 +69,7 @@ def from_payloads(calc: dict, base: dict | None, sources: dict | None = None) ->
         sata_rate=float(sata.get("dividend_rate") or 0.0),
         cash=float(r.get("cash") or 0.0), securities=float(r.get("marketableSecurities") or 0.0),
         debt=float(r.get("debt") or 0.0), warrants=float(shares.get("traditional_warrants") or 0.0),
-        strive_ev_mnav=r.get("evMnav"), sources=sources or {})
+        strive_ev_mnav=r.get("evMnav"), sources=sources or {}, history=_history(base, as_of))
 
 
 def load(offline: bool = False, live_prices: bool = False) -> State:

@@ -50,19 +50,21 @@ def show_levers(st: state.State, lv: levers.Levers, rate: float) -> None:
     print(f"  1 BTC        ${lv.ye_btc_price:,.0f} at {lv.ye_anchor}, then {bands} CAGR (base {lv.base_cagr:.0%})")
     later = ("" if lv.sata_pct_of_btc_nav is None else
              f", then {lv.sata_pct_of_btc_nav:.2%} of the BTC stack / week (glide {lv.sata_glide_weeks:g} wks)")
-    rt = f"{rate:.2%} static" if lv.sata_rate_target is None else         f"{rate:.2%} -> {lv.sata_rate_target:.2%} by {lv.sata_rate_glide_to}"
+    rt = (f"{rate:.2%} static" if lv.sata_rate_target is None
+          else f"{rate:.2%} -> {lv.sata_rate_target:.2%} by {lv.sata_rate_glide_to}")
     print(f"  2 SATA       {usd(lv.sata_weekly_usd)} / week through {lv.sata_switch}{later} · at $100 par · {rt} · "
           f"{lv.reserve_months:g}-month cash reserve")
     print(f"  3 Common     {lv.common_weekly_pct:.2%} of FD shares / week, sold at the market mNAV ({mn})")
-    print(f"  4 Valuation  price target {lv.pt_date} = NTAV/share + {lv.growth_multiple:g}x next year's {lv.gain_basis} "
-          f"gain/share · table k {lv.k_table[0]:g}x-{lv.k_table[-1]:g}x")
+    print(f"  4 Valuation  price target {lv.pt_date} = (NTAV + {lv.growth_multiple:g}x the year's BTC $ Gain) / FD shares "
+          f"(TD Cowen) · table k {lv.k_table[0]:g}x-{lv.k_table[-1]:g}x · today's price implies "
+          f"{valuation.implied_k(st):.2f}x")
     print(f"  Warrants     {lv.warrant_exercise:.0%} of {st.warrants / 1e6:.2f}M at ${lv.warrant_strike:g} on "
           f"{lv.warrant_date} if ASST > strike · burn {usd(lv.net_cash_burn_weekly_usd)}/week · forecast to {lv.horizon_end}")
 
 
 def show_tables(st: state.State, lv: levers.Levers) -> None:
     t = valuation.table(st, lv)
-    print(f"\nPRICE TARGET AT {lv.pt_date}  (rows: k on next year's {lv.gain_basis} gain; columns: BTC CAGR after {lv.ye_anchor})")
+    print(f"\nPRICE TARGET AT {lv.pt_date}  (rows: k on the year's BTC $ Gain; columns: BTC CAGR after {lv.ye_anchor})")
     print(t["price_target"].map(lambda v: f"${v:,.2f}").to_string())
     print("\nIMPLIED mNAV AT THE TARGET (price target / NTAV per share)")
     print(t["implied_mnav"].map(lambda v: f"{v:.2f}x").to_string())
@@ -70,7 +72,7 @@ def show_tables(st: state.State, lv: levers.Levers) -> None:
 
 def show_base(st: state.State, lv: levers.Levers) -> None:
     df = engine.run(st, lv, lv.base_cagr, lv.mnav_target)
-    vals = {v: valuation.price_target(df, v, lv) for v in valuation.valuation_dates(st, lv)}
+    vals = {v: valuation.price_target(df, st, v, lv) for v in valuation.valuation_dates(st, lv)}
     yes = [st.price_date] + [date(y, 12, 31) for y in range(st.price_date.year, lv.horizon_end.year + 1)
                              if st.price_date < date(y, 12, 31) <= lv.horizon_end]
     print(f"\nBASE CASE ({lv.base_cagr:.0%} CAGR), YEAR BY YEAR")
@@ -81,24 +83,24 @@ def show_base(st: state.State, lv: levers.Levers) -> None:
                      "SATA": usd(r.sata_notional), "Amplif.": f"{r.amplification:.1%}",
                      "FD shares": f"{r.fd_shares / 1e6:.1f}M", "Sats/sh": f"{r.sats_per_share:,.0f}",
                      "NTAV/sh": f"${r.ntav_per_share:,.2f}", "Mkt price": f"${r.share_price:,.2f}",
-                     "Fwd gain": f"{v['forward_yield']:.0%}" if v else "—",
+                     "BTC Yield": f"{v['btc_yield']:.0%}" if v else "—",
                      "Value": f"${v['price_target']:,.2f}" if v else "—",
                      "Impl. mNAV": f"{v['implied_mnav']:.2f}x" if v else "—"})
     print(pd.DataFrame(rows).set_index("date").to_string())
-    print("  Mkt price = market mNAV x NTAV/share (sets the price new common sells at); Value = NTAV/share + k x next "
-          "year's gain")
+    print("  Mkt price = market mNAV x NTAV/share (sets the price new common sells at); Value = (NTAV + k x the year's "
+          "BTC $ Gain) / FD shares")
     if (df["btc_bought_usd"] < 0).any():
         print("  ! the dividend reserve ran dry and BTC was sold in some weeks")
 
     a = valuation.attribution(st, lv, lv.base_cagr)
     print(f"\nWHERE THE PRICE TARGET COMES FROM (base case, $ per share; today's price ${a['today_price'].iloc[0]:.2f})")
     cols = ["start", "btc_move", "amplification", "sata_dividends", "issuance", "op_costs", "ntav_end",
-            "growth_premium", "end"]
+            "premium_sata", "premium_common", "growth_premium", "end"]
     out = a[cols].rename(columns={"start": "NTAV today", "btc_move": "BTC move", "amplification": "Amplification",
-                                  "sata_dividends": "SATA divs",
-                                  "issuance": "Issuance", "op_costs": "Op. costs", "ntav_end": "NTAV at T",
-                                  "growth_premium": "Growth prem.", "end": "Value"})
-    print(out.map(lambda v: f"{v:+,.2f}").to_string())
+                                  "sata_dividends": "SATA divs", "issuance": "Issuance", "op_costs": "Op. costs",
+                                  "ntav_end": "NTAV at T", "premium_sata": "SATA prem.",
+                                  "premium_common": "Common prem.", "growth_premium": "Growth prem.", "end": "Value"})
+    print(out.map(lambda v: "—" if pd.isna(v) else f"{v:+,.2f}").to_string())
 
 
 def show_calibration(offline: bool) -> None:
