@@ -27,6 +27,18 @@ def test_round_trip_reproduces_the_target(pub, tmp_path):
         pytest.approx(pub.price_target, rel=1e-12)
 
 
+def test_history_entries_survive_the_round_trip(pub, tmp_path):
+    path, _, _ = valuation.solve_market(pub.state, pub.levers, pub.levers.base_cagr)
+    v = valuation.price_target(path, pub.state, pub.levers.pt_date, pub.levers)
+    e = published.entry(pub, v, 196000.0)
+    assert e["price_target"] == pytest.approx(pub.price_target) and e["k_start"] == pytest.approx(3.35)
+    assert e["ntav_per_share"] + e["growth_premium"] == pytest.approx(e["price_target"])  # the breakdown adds up
+    f = tmp_path / "published.json"
+    published.save_local(replace(pub, history=[e]), f)
+    back = published.load(f)
+    assert back.history == [e]
+
+
 def test_missing_file_means_nothing_published(tmp_path):
     assert published.load(tmp_path / "none.json") is None
 

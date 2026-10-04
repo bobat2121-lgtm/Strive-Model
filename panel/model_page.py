@@ -1,6 +1,6 @@
 """The model: the price target as a hero, Strive today (last 8-K), the path to the target, how the target is built,
 and everything else folded into one collapsed section."""
-from datetime import date
+from datetime import date, datetime
 
 import pandas as pd
 import streamlit as st
@@ -104,8 +104,9 @@ theme.ledger([
 
 # ------------------------------------------------------------------ everything else, folded away
 with st.expander("Full model detail", expanded=False):
-    tab_dates, tab_table, tab_sata, tab_fcst = st.tabs(["All valuation dates", "Price-target table", "SATA issuance",
-                                                        f"Forecast to {lv.horizon_end.year}"])
+    tab_dates, tab_table, tab_sata, tab_fcst, tab_hist = st.tabs(
+        ["All valuation dates", "Price-target table", "SATA issuance", f"Forecast to {lv.horizon_end.year}",
+         "PT history"])
     with tab_dates:
         st.caption(common.md(
             f"Each year end valued the same way, {common.k_label(lv, res['implied_k'])}; new common sells at a market "
@@ -223,8 +224,61 @@ with st.expander("Full model detail", expanded=False):
         if (res["path"]["btc_bought_usd"] < 0).any():
             st.warning("The dividend reserve ran dry and BTC was sold in some weeks.")
 
+    with tab_hist:
+        hist = list(reversed(pub.history)) if pub else []
+        if not hist:
+            st.caption("No price target has been published yet.")
+        else:
+            st.caption(f"Every price target {pub.set_by} has published, newest first. Each is frozen as it was set: "
+                       f"the target, its breakdown, and the levers and data behind it that day.")
+            cols = [f"{datetime.fromisoformat(e['set_at']):%b %d, %Y · %H:%M} UTC" + (" (official)" if i == 0 else "")
+                    for i, e in enumerate(hist)]
+
+            def change(i):
+                if i == len(hist) - 1:
+                    return "—"
+                d = hist[i]["price_target"] - hist[i + 1]["price_target"]
+                return f"{common.signed(d)} ({d / hist[i + 1]['price_target']:+.0%})"
+
+            target = pd.DataFrame({c: {
+                "Price target": f"${e['price_target']:,.2f} at {date.fromisoformat(e['pt_date']):%b %d, %Y}",
+                "Change vs the one before": change(i),
+                "ASST when set": f"${e['asst_price']:,.2f}",
+                "Upside when set": f"{e['price_target'] / e['asst_price'] - 1:+.0%}",
+                "Data": f"8-K {date.fromisoformat(e['data_as_of']):%b %d} · prices {date.fromisoformat(e['prices_on']):%b %d, %Y}",
+                "NTAV per share at the target": f"${e['ntav_per_share']:,.2f}",
+                f"{date.fromisoformat(e['pt_date']).year} BTC Yield": f"{e['btc_yield']:.0%}",
+                "Bitcoin earnings per share": f"${e['gain_per_share']:,.2f}",
+                "Growth multiple k": f"{e['k_start']:.2f}x → {e['k']:.2f}x",
+                "Growth premium": f"${e['growth_premium']:,.2f}",
+                "Implied mNAV": f"{e['implied_mnav']:.2f}x",
+            } for i, (c, e) in enumerate(zip(cols, hist))})
+            st.subheader("The target and its breakdown")
+            st.dataframe(target, width="stretch", height=(len(target) + 1) * 35 + 3)  # every row, no scroll
+
+            def levers_row(e):
+                x = e["levers"]
+                return {
+                    "BTC at the end of 2026": f"${x['ye_btc_price']:,.0f}",
+                    "BTC growth after that": f"{x['base_cagr']:.0%} a year",
+                    "BTC at the target date": f"${e['btc_price_at_target']:,.0f}",
+                    "SATA per week now": f"${x['sata_weekly_usd'] / 1e6:,.1f}M",
+                    "SATA demand growth": f"{x['sata_growth']:.0%} a year",
+                    "SATA dividend rate": f"{e['sata_rate']:.2%}" + (
+                        f" → {x['sata_rate_target']:.2%}" if x.get("sata_rate_target") is not None else ""),
+                    "Common issuance": f"{x['common_weekly_pct']:.2%} of shares a week",
+                    "Market mNAV": "follows the model" if x["market_mnav_mode"] == "model" else (
+                        "held" if x.get("mnav_target") is None else f"glides to {x['mnav_target']:.2f}x"),
+                    "Warrants exercised": f"{x['warrant_exercise']:.0%}",
+                    "Net cash burn": f"${x['net_cash_burn_weekly_usd'] / 1e6:,.1f}M a week",
+                }
+
+            st.subheader("The levers behind it")
+            behind = pd.DataFrame({c: levers_row(e) for c, e in zip(cols, hist)})
+            st.dataframe(behind, width="stretch", height=(len(behind) + 1) * 35 + 3)
+
 st.caption(common.md("Sources: " + " · ".join(f"{k}: {v}" for k, v in stt.sources.items())
                      + ". An independent modeling tool that applies your levers to Strive's published figures; not "
                      "affiliated with or endorsed by Strive, Inc. Not a recommendation."))
 
-common.owner_panel(stt, lv, v, pub, mode)
+common.owner_panel(stt, lv, v, r.btc_price, pub, mode)

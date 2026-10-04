@@ -279,10 +279,12 @@ def _lock() -> None:
     st.session_state.pop(OWNER_MSG, None)
 
 
-def _publish(lv: levers.Levers, st_: state.State, price_target: float) -> None:
+def _publish(lv: levers.Levers, st_: state.State, value: dict, btc_at_target: float) -> None:
     if not st.session_state.get(OWNER_KEY):
         return
-    p = published.make(lv, st_, price_target, OWNER_HANDLE)
+    prev = current_published()
+    p = published.make(lv, st_, value["price_target"], OWNER_HANDLE)
+    p = replace(p, history=[*(prev.history if prev else []), published.entry(p, value, btc_at_target)])
     published.save_local(p)
     token = os.environ.get("GITHUB_TOKEN")
     if not token:
@@ -302,7 +304,8 @@ def _publish(lv: levers.Levers, st_: state.State, price_target: float) -> None:
     _reset_levers()  # the owner now sees the new live target too
 
 
-def owner_panel(st_: state.State, lv: levers.Levers, value: dict, pub: published.Published | None, mode: str) -> None:
+def owner_panel(st_: state.State, lv: levers.Levers, value: dict, btc_at_target: float,
+                pub: published.Published | None, mode: str) -> None:
     """Password-locked: set this session's levers and data as the live price target for every viewer."""
     with st.sidebar, st.expander("Owner", expanded=bool(st.session_state.get(OWNER_MSG)
                                                         or st.session_state.get(OWNER_KEY))):
@@ -326,5 +329,5 @@ def owner_panel(st_: state.State, lv: levers.Levers, value: dict, pub: published
             st.markdown(md(f"Set **${value['price_target']:,.2f}** at {T:%b %d, %Y} as the live price target, on these "
                            f"levers and the data as of {st_.as_of:%b %d} (prices {st_.price_date:%b %d, %Y})."))
             st.button("Set as the live price target", type="primary", width="stretch", on_click=_publish,
-                      args=(lv, st_, value["price_target"]))
+                      args=(lv, st_, value, btc_at_target))
         st.button("Lock", on_click=_lock, width="stretch")

@@ -6,7 +6,7 @@ from __future__ import annotations
 import base64
 import json
 import math
-from dataclasses import asdict, dataclass, fields
+from dataclasses import asdict, dataclass, field, fields
 from datetime import date, datetime, timezone
 from pathlib import Path
 
@@ -27,6 +27,7 @@ class Published:
     price_target: float       # at levers.pt_date, as computed when it was set
     levers: Levers
     state: State
+    history: list = field(default_factory=list)  # every published target, oldest first (see entry())
 
 
 def _plain(obj):
@@ -46,7 +47,8 @@ def _dated(cls, raw: dict):
 
 def dumps(p: Published) -> str:
     return json.dumps({"set_at": p.set_at, "set_by": p.set_by, "price_target": p.price_target,
-                       "levers": asdict(p.levers), "state": asdict(p.state)}, default=_plain, indent=2) + "\n"
+                       "levers": asdict(p.levers), "state": asdict(p.state), "history": p.history},
+                      default=_plain, indent=2) + "\n"
 
 
 def loads(text: str) -> Published:
@@ -55,7 +57,7 @@ def loads(text: str) -> Published:
     st["history"] = {k: {**v, "date": date.fromisoformat(v["date"])} for k, v in (st.get("history") or {}).items()}
     return Published(set_at=datetime.fromisoformat(raw["set_at"]), set_by=raw["set_by"],
                      price_target=float(raw["price_target"]), levers=_dated(Levers, raw["levers"]),
-                     state=_dated(State, st))
+                     state=_dated(State, st), history=raw.get("history") or [])
 
 
 def load(path: Path = PATH) -> Published | None:
@@ -68,6 +70,23 @@ def load(path: Path = PATH) -> Published | None:
 def make(levers: Levers, state: State, price_target: float, set_by: str) -> Published:
     return Published(set_at=datetime.now(timezone.utc).replace(microsecond=0), set_by=set_by,
                      price_target=float(price_target), levers=levers, state=state)
+
+
+def entry(p: Published, value: dict, btc_price_at_target: float) -> dict:
+    """One line of the price-target history, frozen as published: the target, its breakdown and the levers and data
+    behind it (JSON-ready). value is valuation.price_target at the target date."""
+    from model import valuation  # here, not at the top: valuation is heavier and published is loaded on every run
+    lv, st = p.levers, p.state
+    k0 = lv.k_start if lv.k_start is not None else valuation.implied_k(st)
+    return {"set_at": p.set_at.isoformat(), "set_by": p.set_by, "price_target": float(p.price_target),
+            "pt_date": lv.pt_date.isoformat(), "asst_price": float(st.share_price), "data_as_of": st.as_of.isoformat(),
+            "prices_on": st.price_date.isoformat(), "ntav_per_share": float(value["ntav_per_share"]),
+            "btc_yield": float(value["btc_yield"]), "gain_per_share": float(value["gain_per_share"]),
+            "k": float(value["k"]), "k_start": float(k0) if lv.k_glide else float(value["k"]),
+            "growth_premium": float(value["growth_premium"]), "implied_mnav": float(value["implied_mnav"]),
+            "btc_price_at_target": float(btc_price_at_target),
+            "sata_rate": float(lv.sata_rate if lv.sata_rate is not None else st.sata_rate),
+            "levers": json.loads(json.dumps(asdict(lv), default=_plain))}
 
 
 def save_local(p: Published, path: Path = PATH) -> None:

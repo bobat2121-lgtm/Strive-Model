@@ -54,6 +54,7 @@ def test_model_page_renders(monkeypatch, snap):
     assert any("vg-ledger" in b and "Growth premium" in b for b in bodies)
     assert [e.label for e in at.main.expander][:2] == ["Key assumptions", "Full model detail"]  # both start folded
     assert "SATA issuance" in [t.label for t in at.tabs]           # the SATA schedule, year by year
+    assert "PT history" in [t.label for t in at.tabs]              # every published target
     assert all(e.proto.expanded for e in at.sidebar.expander if e.label != "Owner")  # lever sections start open
 
 
@@ -91,7 +92,20 @@ def test_owner_panel_needs_the_password(monkeypatch, snap, pub):
     _button(at, "Set as the live price target").click().run()
     assert not at.exception
     assert saved and saved[0].levers.common_weekly_pct == pytest.approx(0.0075) and saved[0].set_by == "@WallyXIX"
+    assert len(saved[0].history) == len(pub.history) + 1           # publishing adds a line to the PT history
+    assert saved[0].history[-1]["price_target"] == pytest.approx(saved[0].price_target)
     assert any("not saved to GitHub" in w.value for w in at.warning)  # no token: this server only, and it says so
+
+
+def test_pt_history_lists_the_official_target_first(monkeypatch, snap, pub):
+    path, _, _ = valuation.solve_market(pub.state, pub.levers, pub.levers.base_cagr)
+    v = valuation.price_target(path, pub.state, pub.levers.pt_date, pub.levers)
+    pub = replace(pub, history=[published.entry(pub, v, 196000.0)])
+    at = _app(monkeypatch, snap, pub).run()
+    assert not at.exception
+    frames = [d.value for d in at.dataframe]
+    hist = next(f for f in frames if "Upside when set" in f.index)
+    assert list(hist.columns)[0].endswith("(official)") and hist.iloc[0, 0].startswith(f"${pub.price_target:,.2f}")
 
 
 def test_publishing_without_a_password_secret_is_off(monkeypatch, snap, pub):
