@@ -1,5 +1,7 @@
 """The model: the price target as a hero, Strive today (last 8-K), the path to the target, how the target is built,
 and everything else folded into one collapsed section."""
+from datetime import date
+
 import pandas as pd
 import streamlit as st
 
@@ -102,8 +104,8 @@ theme.ledger([
 
 # ------------------------------------------------------------------ everything else, folded away
 with st.expander("Full model detail", expanded=False):
-    tab_dates, tab_table, tab_fcst = st.tabs(["All valuation dates", "Price-target table",
-                                              f"Forecast to {lv.horizon_end.year}"])
+    tab_dates, tab_table, tab_sata, tab_fcst = st.tabs(["All valuation dates", "Price-target table", "SATA issuance",
+                                                        f"Forecast to {lv.horizon_end.year}"])
     with tab_dates:
         st.caption(common.md(
             f"Each year end valued the same way, {common.k_label(lv, res['implied_k'])}; new common sells at a market "
@@ -145,6 +147,37 @@ with st.expander("Full model detail", expanded=False):
             if base_row in css.index and base_col in css.columns:
                 css.loc[base_row, base_col] = hl
             tab.dataframe(df.style.format(fmt).apply(lambda _, css=css: css, axis=None), width="stretch")
+
+    with tab_sata:
+        sy = valuation.sata_by_year(res["path"], stt, lv)
+        sy["period"] = [f"{r['from']:%b}–Dec {y}" if i == 0 and r["from"] != date(y - 1, 12, 31) else str(y)
+                        for i, (y, r) in enumerate(sy.iterrows())]
+        st.caption(common.md(
+            f"Section 2 of the levers: ${lv.sata_weekly_usd / 1e6:,.1f}M of SATA a week through "
+            f"{lv.sata_switch:%b %d, %Y}, then demand grows {lv.sata_growth:.0%} a year (compounding week by week), "
+            f"always sold at $100 par. Dividends {common.rate_label(lv, rate)}. Strive keeps {lv.reserve_months:g} "
+            f"months of dividends in cash and buys bitcoin with the rest."))
+        last, at_t = sy.iloc[-1], sy.loc[T.year]
+        end = lv.horizon_end
+        theme.cards([
+            (f"Weekly pace · {end:%b %Y}", common.usd(last["weekly_end"]), f"from ${lv.sata_weekly_usd / 1e6:,.0f}M a week now"),
+            (f"Outstanding · {T:%b %Y}", common.usd(at_t["outstanding"]), f"from {common.usd(stt.sata_notional)} today"),
+            (f"Outstanding · {end:%b %Y}", common.usd(last["outstanding"]), f"{last['amplification']:.0%} of the bitcoin"),
+            (f"Dividends · {end.year}", common.usd(last["dividends"]), f"at {last['rate']:.2%}"),
+        ])
+        st.altair_chart(charts.sata_years(sy, c), width="stretch", theme=None)
+        st.dataframe(pd.DataFrame({
+            "Weekly pace": sy["weekly_end"].map(common.usd),
+            "Sold": sy["sold"].map(common.usd),
+            "Outstanding": sy["outstanding"].map(common.usd),
+            "Dividends paid": sy["dividends"].map(common.usd),
+            "Cash reserve": sy["reserve"].map(common.usd),
+            "BTC bought": sy["btc_bought"].map(lambda v: f"{v:,.0f}"),
+            "Amplification": sy["amplification"].map(lambda v: f"{v:.0%}"),
+        }).set_axis(list(sy["period"])), width="stretch")
+        st.caption("Weekly pace, outstanding, cash reserve and amplification are at year end. BTC bought = bitcoin "
+                   "bought with SATA money: proceeds less the dividends paid and the cash reserve's top-up, at each "
+                   "week's bitcoin price. Amplification = SATA outstanding ÷ the bitcoin's value.")
 
     with tab_fcst:
         st.caption("Base case, week by week. The market price is the market mNAV × NTAV per share; it sets the price "

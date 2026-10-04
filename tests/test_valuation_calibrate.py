@@ -118,3 +118,17 @@ def test_calibration_reproduces_the_six_week_averages(base, feed, bars):
     assert round(s["common_pct_recent"], 4) == 0.0050
     assert round(s["sata_share_of_new_capital"], 2) == 0.67
     assert s["max_abs_gap"] < 2e6  # sources and uses agree every week
+
+
+def test_sata_by_year_follows_the_section_2_schedule(st, lv):
+    df, _, _ = valuation.solve_market(st, lv, lv.base_cagr)
+    sy = valuation.sata_by_year(df, st, lv)
+    assert list(sy.index) == list(range(st.price_date.year, lv.horizon_end.year + 1))
+    prev = st.sata_notional
+    for y, r in sy.iterrows():                          # outstanding = last year's + this year's sales, at par
+        assert r["outstanding"] == pytest.approx(prev + r["sold"])
+        prev = r["outstanding"]
+    assert sy.loc[lv.sata_switch.year, "weekly_end"] == pytest.approx(lv.sata_weekly_usd)   # flat to the switch...
+    assert sy.loc[lv.sata_switch.year + 1, "weekly_end"] == pytest.approx(lv.sata_weekly_usd * (1 + lv.sata_growth))
+    for _, r in sy.iterrows():                          # the cash reserve: 18 months of dividends
+        assert r["reserve"] == pytest.approx(lv.reserve_months / 12 * r["rate"] * r["outstanding"], rel=1e-6)

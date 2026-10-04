@@ -53,6 +53,7 @@ def test_model_page_renders(monkeypatch, snap):
     assert any("$14.09" in b and "2.13×" in b for b in bodies)      # today's cards match Strive's dashboard
     assert any("vg-ledger" in b and "Growth premium" in b for b in bodies)
     assert [e.label for e in at.main.expander][:2] == ["Key assumptions", "Full model detail"]  # both start folded
+    assert "SATA issuance" in [t.label for t in at.tabs]           # the SATA schedule, year by year
     assert all(e.proto.expanded for e in at.sidebar.expander if e.label != "Owner")  # lever sections start open
 
 

@@ -129,6 +129,26 @@ def price_target(df: pd.DataFrame, state: State, t: date, lv: Levers, k: float |
             "net_target": net_value(df, t, k)}
 
 
+def sata_by_year(df: pd.DataFrame, state: State, lv: Levers) -> pd.DataFrame:
+    """SATA year by year through the horizon (the first row is the rest of this year): the weekly pace at year end,
+    $ sold, outstanding at year end, dividends paid, the cash reserve at year end, the bitcoin bought with SATA money
+    (proceeds less dividends and the reserve top-up, at each week's price) and amplification at year end."""
+    rows, first = [], df.index[0]
+    for y in range(state.price_date.year, lv.horizon_end.year + 1):
+        end = pd.Timestamp(date(y, 12, 31))
+        if end <= first:
+            continue
+        w = df.loc[max(first, pd.Timestamp(date(y - 1, 12, 31))):end]
+        start, b, flows = w.iloc[0], w.iloc[-1], w.iloc[1:]
+        d_cash = w["cash"].diff().iloc[1:]
+        rows.append({"year": y, "from": start.name.date(), "weekly_end": engine.sata_per_week(lv, end.date()),
+                     "sold": flows["raised_sata"].sum(), "outstanding": b["sata_notional"],
+                     "dividends": flows["dividends"].sum(), "reserve": b["cash"],
+                     "btc_bought": ((flows["raised_sata"] - flows["dividends"] - d_cash) / flows["btc_price"]).sum(),
+                     "amplification": b["amplification"], "rate": b["sata_rate"]})
+    return pd.DataFrame(rows).set_index("year")
+
+
 def implied_k(state: State) -> float:
     """The k today's price implies on Strive's actual trailing-12-month BTC $ Gain (same definition)."""
     h = state.history["year_ago"]

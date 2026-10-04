@@ -109,6 +109,23 @@ def lines(df: pd.DataFrame, series: list[str], fmt: str, c: dict, height: int = 
     return styled(alt.layer(*layers).properties(height=height), c)
 
 
+def sata_years(df: pd.DataFrame, c: dict) -> alt.LayerChart:
+    """SATA sold each year (one bar a year, labelled); df from valuation.sata_by_year plus a "period" column."""
+    d = df.reset_index()
+    d["text"] = d["sold"].map(lambda v: f"${v / 1e9:,.2f}B")
+    d["out"] = d["outstanding"].map(lambda v: f"${v / 1e9:,.2f}B")
+    d["pace"] = d["weekly_end"].map(lambda v: f"${v / 1e6:,.1f}M")
+    base = alt.Chart(d).encode(
+        x=alt.X("period:N", sort=None, title=None, axis=alt.Axis(labelAngle=0)),
+        y=alt.Y("sold:Q", title="SATA sold", axis=alt.Axis(labelExpr="'$' + format(datum.value / 1e9, '~g') + 'B'")))
+    bars = base.mark_bar(size=46, cornerRadiusTopLeft=4, cornerRadiusTopRight=4, color=c["s1"]).encode(
+        tooltip=[alt.Tooltip("period:N", title="Period"), alt.Tooltip("text:N", title="SATA sold"),
+                 alt.Tooltip("pace:N", title="Weekly pace at year end"),
+                 alt.Tooltip("out:N", title="Outstanding at year end")])
+    labels = base.mark_text(dy=-9, fontSize=12, color=c["ink"]).encode(text="text:N")
+    return styled(alt.layer(bars, labels).properties(height=300), c)
+
+
 def weekly_bars(df: pd.DataFrame, c: dict) -> alt.LayerChart:
     """SATA vs common dollars raised per week (grouped)."""
     long = df.melt("week", ["SATA", "Common"], var_name="series", value_name="usd")
