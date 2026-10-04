@@ -113,11 +113,10 @@ def sidebar(st_: state.State) -> levers.Levers:
         weekly = st.number_input(f"$M per week through {d.sata_switch:%b %d, %Y}", min_value=0.0,
                                  value=d.sata_weekly_usd / 1e6, step=5.0, format="%.1f",
                                  help="Recent run-rate: $72.7M/week (6 weeks to 9/25/26).")
-        scale = st.toggle("Then scale with the BTC stack", value=d.sata_pct_of_btc_nav is not None)
-        pct = st.number_input("% of the BTC stack per week", min_value=0.0, value=(d.sata_pct_of_btc_nav or 0.01) * 100,
-                              step=0.05, format="%.2f", disabled=not scale,
-                              help="1.00% holds amplification near 50% at a 40% BTC CAGR.")
-        glide = st.slider("Glide from $ to % (weeks)", 0, 26, int(d.sata_glide_weeks), disabled=not scale)
+        growth = st.number_input(f"Demand growth after {d.sata_switch:%b %d, %Y} (% a year)", min_value=-50.0,
+                                 max_value=200.0, value=d.sata_growth * 100, step=5.0, format="%.0f",
+                                 help="Weekly SATA issuance grows this much a year after the switch date. At 50%, "
+                                      "SATA outstanding reaches about $13B by end-2028 (Strategy's whole preferred stack is ~$15B today).")
         rate_now = d.sata_rate if d.sata_rate is not None else st_.sata_rate
         glide_rate = st.toggle(f"Glide the dividend rate (now {rate_now:.2%})", value=d.sata_rate_target is not None,
                                help="Off: the rate holds at today's level. On: it moves in a straight line to the "
@@ -167,7 +166,7 @@ def sidebar(st_: state.State) -> levers.Levers:
 
     return replace(d, ye_btc_price=ye, cagr_bands=bands, base_cagr=base, sata_weekly_usd=weekly * 1e6,
                    sata_rate_target=rate_target / 100 if glide_rate else None, sata_rate_glide_to=rate_by,
-                   sata_pct_of_btc_nav=pct / 100 if scale else None, sata_glide_weeks=float(glide),
+                   sata_growth=growth / 100,
                    common_weekly_pct=common / 100, mnav_target=None if hold else target, mnav_glide_to=glide_to,
                    pt_date=pt_date, growth_multiple=k, k_table=rows,
                    warrant_exercise=wex / 100, net_cash_burn_weekly_usd=burn * 1e6)

@@ -7,11 +7,10 @@ btc:
   base_cagr_pct: 40           # the band used for single-run outputs and the attribution
 
 sata:                         # SATA is always sold at $100 par
-  weekly_usd: 70000000        # phase 1: fixed $ per week through switch_date. 6-week avg (8/21-9/25): $72.7M
+  weekly_usd: 70000000        # fixed $ per week through switch_date. 6-week avg (8/21-9/25): $72.7M
   switch_date: 2026-12-31
-  pct_of_btc_stack_weekly: 1.0  # phase 2: % of BTC NAV issued each week (null = keep weekly_usd). 1.0% holds
-                                # amplification near 50% at 40% BTC CAGR, but needs ~$130M/wk by YE27, ~$360M/wk by YE28
-  glide_weeks: 13             # blend from weekly_usd to the % over this many weeks after the switch
+  growth_pct: 50              # demand-led: weekly SATA grows this much a year after the switch
+                              # (50% -> ~$13.4B outstanding at YE28, ~$62B at YE31; Strategy's whole preferred stack is ~$15B today)
   rate_pct: null              # null = Strive's current rate (13.00%), the starting point
   rate_target_pct: null       # null = hold the rate static; a number glides the rate to it by rate_glide_to
   rate_glide_to: 2027-12-31

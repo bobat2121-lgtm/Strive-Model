@@ -48,8 +48,7 @@ def show_levers(st: state.State, lv: levers.Levers, rate: float) -> None:
     mn = f"hold today's {m0:.2f}x" if lv.mnav_target is None else f"{m0:.2f}x -> {lv.mnav_target:.2f}x by {lv.mnav_glide_to}"
     print("\nLEVERS")
     print(f"  1 BTC        ${lv.ye_btc_price:,.0f} at {lv.ye_anchor}, then {bands} CAGR (base {lv.base_cagr:.0%})")
-    later = ("" if lv.sata_pct_of_btc_nav is None else
-             f", then {lv.sata_pct_of_btc_nav:.2%} of the BTC stack / week (glide {lv.sata_glide_weeks:g} wks)")
+    later = f", then growing {lv.sata_growth:.0%} a year"
     rt = (f"{rate:.2%} static" if lv.sata_rate_target is None
           else f"{rate:.2%} -> {lv.sata_rate_target:.2%} by {lv.sata_rate_glide_to}")
     print(f"  2 SATA       {usd(lv.sata_weekly_usd)} / week through {lv.sata_switch}{later} · at $100 par · {rt} · "

@@ -36,13 +36,11 @@ def test_first_week_by_hand(st, lv):
     assert r.sata_notional == pytest.approx(st.sata_notional + 70e6)
 
 
-def test_sata_is_fixed_then_glides_to_a_share_of_the_stack(lv):
-    nav = 5e9
-    assert engine.sata_per_week(lv, date(2026, 12, 31), nav) == 70e6               # through the switch: fixed
-    mid = engine.sata_per_week(lv, date(2026, 12, 31) + (date(2027, 4, 1) - date(2026, 12, 31)) / 2, nav)
-    assert 50e6 < mid < 70e6                                                        # halfway: a blend
-    assert engine.sata_per_week(lv, date(2027, 6, 30), nav) == pytest.approx(0.01 * nav)  # after the glide: 1% of NAV
-    assert engine.sata_per_week(replace(lv, sata_pct_of_btc_nav=None), date(2028, 1, 1), nav) == 70e6
+def test_sata_demand_is_flat_then_grows(lv):
+    assert engine.sata_per_week(lv, date(2026, 12, 31)) == 70e6                            # through the switch: flat
+    assert engine.sata_per_week(lv, date(2027, 12, 31)) == pytest.approx(70e6 * 1.5)       # one year on: +50%
+    assert engine.sata_per_week(lv, date(2028, 12, 31)) == pytest.approx(70e6 * 1.5 ** 2)
+    assert engine.sata_per_week(replace(lv, sata_growth=0.0), date(2029, 6, 30)) == 70e6
 
 
 def test_sata_rate_holds_or_glides(st, lv):

@@ -311,6 +311,12 @@ Strive Model/
 - **Cash reserve:** the 18-month policy holds.
 - **Base case:** PT ≈ $241, an implied 2.53x.
 
+**SATA made demand-led (2026-10-04):**
+- The "% of the BTC stack" rule compounded to an implausible $389B by YE31.
+- New rule: $70M a week through YE26, then the weekly amount grows at a lever rate (default 50% a year).
+- Result: SATA reaches $13.4B at YE28 and $62B at YE31. Base YE28 target ≈ $178 (implied 1.88×).
+- Amplification drifts down after 2027 (42% at YE28, 15% at YE31) because common issuance outgrows SATA.
+
 **Valuation switched to TD Cowen's method (2026-10-04, approved by the user):**
 - PT = (NTAV + k × the year's BTC $ Gain) / FD shares. BTC $ Gain = start-of-year BTC × BTC Yield × year-end BTC price, gross, over the year ending at the target. k = 3.
 - It reproduces TD Cowen's $44 (calculated $43.55). Today's price implies 3.37× on Strive's actual trailing 12 months.

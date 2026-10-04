@@ -2,8 +2,8 @@
 
 Each week, in order:
   1. BTC moves along its path; ASST is priced at that week's mNAV x NTAV per share (before the week's issuance).
-  2. Capital comes in: SATA at $100 par (a fixed $ per week through the switch date, then gliding to a % of the
-     BTC stack each week), common (% of FD shares, sold at that price),
+  2. Capital comes in: SATA at $100 par (demand-led: a fixed $ per week through the switch date, then growing at a
+     set rate a year), common (% of FD shares, sold at that price),
      and the PIPE warrants on their exercise date (at the strike, only if ASST is above it).
   3. Cash goes out: SATA dividends (that week's rate x notional, accrued daily; the rate holds at 13% or glides to a
      target) and the net operating burn.
@@ -57,13 +57,11 @@ def glide_path(dates: list[date], v0: float, target: float | None, glide_to: dat
     return np.array([v0 + (target - v0) * min((d - t0).days / span, 1.0) for d in dates])
 
 
-def sata_per_week(lv: Levers, d: date, btc_nav: float) -> float:
-    """Weekly SATA $: fixed through the switch, then glides to a % of BTC NAV."""
-    if lv.sata_pct_of_btc_nav is None or d <= lv.sata_switch:
+def sata_per_week(lv: Levers, d: date) -> float:
+    """Weekly SATA $ (demand-led): flat through the switch date, then growing at sata_growth a year."""
+    if d <= lv.sata_switch:
         return lv.sata_weekly_usd
-    scaled = lv.sata_pct_of_btc_nav * btc_nav
-    w = min((d - lv.sata_switch).days / (7 * lv.sata_glide_weeks), 1.0) if lv.sata_glide_weeks > 0 else 1.0
-    return lv.sata_weekly_usd + (scaled - lv.sata_weekly_usd) * w
+    return lv.sata_weekly_usd * (1 + lv.sata_growth) ** _years_after(lv.sata_switch, d)
 
 
 def run(state: State, lv: Levers, cagr: float, mnav: float | None = None, *, sata: bool = True,
@@ -87,7 +85,7 @@ def run(state: State, lv: Levers, cagr: float, mnav: float | None = None, *, sat
         wk, p, m, rate = days / 7, P[i], M[i], R[i]
         px = metrics.price_at(metrics.Book(btc, p, n, sata_n, cash, sec, debt), m)  # this week's ASST price
         f = dict(flows0)
-        f["raised_sata"] = sata_per_week(lv, dates[i], btc * p) * wk if sata else 0.0
+        f["raised_sata"] = sata_per_week(lv, dates[i]) * wk if sata else 0.0
         f["new_shares"] = n * ((1 + lv.common_weekly_pct) ** wk - 1) if common else 0.0
         f["raised_common"] = f["new_shares"] * px
         if warrants and w_left and dates[i - 1] < lv.warrant_date <= dates[i]:

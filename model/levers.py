@@ -18,12 +18,10 @@ class Levers:
     ye_anchor: date = date(2026, 12, 31)
     cagr_bands: list[float] = field(default_factory=lambda: [0.30, 0.40, 0.50])
     base_cagr: float = 0.40                  # the band used for single-run outputs and the attribution
-    # 2) SATA at $100 par: a fixed $ per week through sata_switch, then a % of the BTC stack (BTC NAV) per week,
-    #    blended from one to the other over sata_glide_weeks so there's no cliff at the switch
+    # 2) SATA at $100 par, demand-led: a fixed $ per week through sata_switch, then growing at sata_growth a year
     sata_weekly_usd: float = 70_000_000.0
     sata_switch: date = date(2026, 12, 31)
-    sata_pct_of_btc_nav: float | None = 0.01  # weekly fraction; None keeps the fixed $ forever
-    sata_glide_weeks: float = 13.0
+    sata_growth: float = 0.50                # annual growth in weekly SATA demand after the switch
     sata_rate: float | None = None           # None = Strive's current rate (13%), the starting point
     sata_rate_target: float | None = None    # None holds the rate static; a number glides to it by sata_rate_glide_to
     sata_rate_glide_to: date = date(2027, 12, 31)
@@ -64,8 +62,7 @@ def load(path: Path | str = DEFAULT_PATH) -> Levers:
         base_cagr=_pct(btc["base_cagr_pct"]) if btc.get("base_cagr_pct") is not None else bands[len(bands) // 2],
         sata_weekly_usd=float(sata.get("weekly_usd", d.sata_weekly_usd)),
         sata_switch=sata.get("switch_date", d.sata_switch),
-        sata_pct_of_btc_nav=_pct(sata.get("pct_of_btc_stack_weekly", d.sata_pct_of_btc_nav * 100)),
-        sata_glide_weeks=float(sata.get("glide_weeks", d.sata_glide_weeks)),
+        sata_growth=_pct(sata.get("growth_pct", d.sata_growth * 100)),
         sata_rate=_pct(sata.get("rate_pct")),
         sata_rate_target=_pct(sata.get("rate_target_pct")),
         sata_rate_glide_to=sata.get("rate_glide_to", d.sata_rate_glide_to),

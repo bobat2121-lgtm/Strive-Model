@@ -6,8 +6,8 @@ values ASST with the multiple Strive itself publishes. A Streamlit app puts the 
 ## The levers (`config/levers.yaml`)
 
 1. **BTC price**: a year-end anchor, then a normalized CAGR. Each band you list becomes a column of the price table.
-2. **SATA** (always at $100 par): a fixed $ per week through YE2026 ($70M), then a % of the BTC stack per week (1.0%).
-   The two are blended over a 13-week glide. Each raise first tops the cash dividend reserve back up to 18 months; the rest buys BTC.
+2. **SATA** (always at $100 par), demand-led: a fixed $ per week through YE2026 ($70M), then that weekly amount grows at a rate you set (default 50% a year; about $13B outstanding by YE2028).
+   Each raise first tops the cash dividend reserve back up to 18 months; the rest buys BTC.
    The dividend rate holds at 13% (Strive's current rate), or glides in a straight line to a target rate by a date you pick.
 3. **Common**: new shares each week as a % of fully diluted shares, sold at the modeled price.
 4. **Price target** (TD Cowen's method), dated 12/31/2028:

@@ -22,8 +22,7 @@ Attribution ($ per share, adds up exactly):
   BTC move       NTAV today x (BTC_T / BTC_0 - 1): common's net assets tracking BTC one-for-one
   Amplification  what the SATA-funded BTC (existing + new) gains, after the cash-reserve drag
   SATA dividends the dividends paid on that SATA
-  Issuance       common ATM + warrants sold above NTAV per share (at the market mNAV path); also the extra SATA, and
-                 its dividends, that a bigger BTC stack brings when SATA scales with the stack
+  Issuance       common ATM + warrants sold above NTAV per share (at the market mNAV path)
   Op. costs      the net cash burn (opex less fee revenue), not dividends
   Growth premium k x the year's BTC $ Gain per share
 """

@@ -68,9 +68,9 @@ def test_btc_move_is_net_assets_tracking_btc(st, lv):
 
 
 def test_more_sata_raises_the_target_and_its_sata_premium(st, lv):
-    lo = valuation.price_target(engine.run(st, replace(lv, sata_pct_of_btc_nav=None), 0.4), st, lv.pt_date, lv)
-    hi = valuation.price_target(engine.run(st, replace(lv, sata_pct_of_btc_nav=0.015), 0.4), st, lv.pt_date, lv)
-    assert hi["price_target"] > lo["price_target"] * 1.5 and hi["premium_sata"] > lo["premium_sata"]
+    lo = valuation.price_target(engine.run(st, replace(lv, sata_growth=0.0), 0.4), st, lv.pt_date, lv)
+    hi = valuation.price_target(engine.run(st, replace(lv, sata_growth=1.0), 0.4), st, lv.pt_date, lv)
+    assert hi["price_target"] > lo["price_target"] and hi["premium_sata"] > lo["premium_sata"]
 
 
 def test_price_target_table_rises_with_k_and_cagr(st, lv):
