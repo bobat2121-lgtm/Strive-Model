@@ -24,10 +24,11 @@ COLUMNS = [(6, 40, 300, 22), (452, 140, 300, 22), (58, 300, 600, 14), (408, 300,
            (440, 600, 752, 16), (90, 930, 1160, 16), (382, 930, 1160, 14)]
 DRAGON = {"x": 330, "y": 34, "w": 128, "h": 100}
 # inside the dragon sprite (its own 128 x 100 pixels, facing left)
-RIDER = (55, 21)                              # top-left of Saylor's sprite; his hips on the dragon's back
+RIDER = (55, 21)                              # top-left of the rider (Matt Cole); his hips on the dragon's back
 MOUTH = (11, 35)                              # the root of the fire, inside the open jaws
 FIRE = {"w": 76, "h": 30}                     # the flame sprite; its root is the middle of its right edge
-ZAP = {"x": 36, "y": 4, "w": 56, "h": 50}     # the box Saylor's electricity crackles in
+ZAP = {"x": 36, "y": 4, "w": 56, "h": 50}     # the box his electricity crackles in
+DAIS_LOGO = {"cx": 394, "y": 180}           # the STRIVE wordmark carved into the dais's lowest step, under the dragon
 BRAZIERS = [(312, 112), (470, 112)]          # bowl centers
 HOARD = [(352, 132, 30, 10), (396, 136, 34, 9), (440, 132, 30, 11), (470, 138, 18, 7), (322, 138, 18, 6)]
 SIGIL = {"cx": 440, "cy": 1062, "r": 34}

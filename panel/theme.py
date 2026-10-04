@@ -2,10 +2,10 @@
 into static/, served by Streamlit's static file serving).
 
 The scene sits fixed behind the page and descends as you scroll: a CSS scroll timeline on Streamlit's main scroll
-container drives it, so the throne hall (a dragon on its hoard, Michael Saylor riding it) is at the top and the deep
+container drives it, so the throne hall (a dragon on its hoard, Matt Cole riding it) is at the top and the deep
 (where the lava runs round a glowing ring and through a bitcoin sigil) is at the bottom. Everything moves with CSS only: lava frames,
 dwarves mining and pacing the walkways, sparkles in the gold, and the dragon, which flaps idly, breathes fire every
-so often from the middle of its mouth (Saylor raises a fist and crackles with electricity) and now and then spins
+so often from the middle of its mouth (Cole raises a fist and crackles with electricity) and now and then spins
 round. prefers-reduced-motion stills it all.
 
 Information panels stay distinct from the scene: opaque dark stone with a light lava border. Headings use the

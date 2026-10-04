@@ -1,7 +1,7 @@
 """Pixel-art assets for the "Mine" theme: a dwarven gold mine under the mountain. Lava runs through irrigation canals
 and pours into a half-hidden bitcoin sigil; dwarves work galleries and walkways; a dragon broods on a hoard at the top
-with Michael Saylor riding it (silver hair, gray beard, navy suit, bitcoin-orange tie; he crackles with electricity
-when it breathes fire).
+with Matt Cole, Strive's CEO, riding it (navy suit, bitcoin-orange tie, a Strive S pin; he crackles with electricity
+when it breathes fire). The STRIVE wordmark is carved into the dais under them, inlaid with gold.
 
 Everything is drawn here, pixel by pixel, at low resolution and scaled up crisply in the browser
 (image-rendering: pixelated). Deterministic: the same seed always draws the same mine.
@@ -233,30 +233,34 @@ def sparkle() -> list[Cv]:
     return out
 
 
-# ------------------------------------------------------------------ sprite: Michael Saylor on the dragon
+# ------------------------------------------------------------------ sprite: Matt Cole (Strive's CEO) on the dragon
 
-SAYLOR_PAL = {"k": OUTLINE, "H": C("#e9e9ec"), "h": C("#b9bcc2"), "g": C("#7e828b"),     # silver hair
-              "S": C("#f3c6a8"), "s": C("#dc9f82"), "d": C("#b2735c"),                     # skin
-              "b": C("#6a6e76"), "e": C("#5b86b0"), "w": C("#f4f1ea"),                     # brows, pale blue eyes
-              "B": C("#ece8e0"), "c": C("#c3bcb1"), "C": C("#8f887e"), "m": C("#9a5548")}  # gray beard, lips
-SAYLOR_HEAD = [  # 13 x 16, three-quarter view facing left: silver hair swept from a side part, short gray beard
-    "....kkkkkk...",
-    "..kkHHHHHHkk.",
-    ".kHHHHHHHHHhk",
-    "kHHHHHHHHHhhk",
-    "kHHHHHHHHhhgk",
-    "kHHHhSSSSShgk",
-    "khhSSSSSSSsgk",
-    "kSbbbSSbbbsgk",
-    "kSewSSSewsddk",
-    "kSSSSsSSSsdhk",
-    "kcSSSssSSscdk",
-    "kBBccccBBcCdk",
-    "kBBmmmBBBcCk.",
-    ".kBBBBBBBcCk.",
-    "..kcBBBBcCk..",
-    "...kkkkkkk...",
+COLE_PAL = {"k": OUTLINE, "h": C("#3a3431"), "H": C("#6b635e"),                          # dark hair, combed back
+            "G": C("#a7a39f"), "g": C("#76716d"),                                        # gray at the sides
+            "S": C("#f1c4a6"), "s": C("#d89c80"), "d": C("#ad7158"),                     # skin
+            "b": C("#3b2f29"), "e": C("#6a8fb3"), "w": C("#f4f1ea"),                     # dark brows, blue eyes
+            "c": C("#a8968b"), "C": C("#7a6e66"), "B": C("#cac2bb"),                     # short salt-and-pepper beard
+            "m": C("#b0605a"), "t": C("#fbf8f2")}                                        # lips, the smile
+COLE_HEAD = [  # 12 x 17, three-quarter view facing left: a long face, dark hair slicked back over gray sides, a short
+    "...kkkkk....",   # salt-and-pepper beard, and a smile
+    ".kkhhHhhkk..",
+    "khhHhhhhHhk.",
+    "khhhhHhhhhgk",
+    "khhhhhhhhggk",
+    "kShhhhhhgGgk",
+    "kSSShhhhgGgk",
+    "kbbbSbbbSGgk",
+    "kSSSSSSSsGgk",
+    "kewSSewSsdGk",
+    "kSSSsSSSssdk",
+    "kSSSssSSsdsk",
+    "kcmCCCmSsck.",
+    "kcctttccsck.",
+    "kccCmCccBk..",
+    ".kcBccBck...",
+    "..kkkkkk....",
 ]
+STRIVE_S = [".XX", "X..", ".X.", "..X", "XX."]   # the Strive S, worn as a lapel pin
 SUIT, SUIT_HI, SUIT_LO = C("#1b2236"), C("#34405f"), C("#10141f")
 SHIRT, SHIRT_LO, TIE, TIE_LO = C("#f4f4ef"), C("#c6cad1"), BTC, C("#c46a08")
 SHOE, SHOE_HI = C("#121212"), C("#3c3c3c")
@@ -264,10 +268,11 @@ RIDER_W, RIDER_H = 26, 44
 FIST = (3, 7)        # where the raised fist is in the breath pose (rider pixels): the electricity starts here
 
 
-def saylor(summoning: bool) -> Cv:
-    """Michael Saylor astride the dragon, facing left, 26 x 44: navy suit, white shirt, bitcoin-orange tie, the near
-    leg down the dragon's shoulder like a rider's. summoning raises his fist (the electricity crackles from it)."""
-    assert all(len(r) == 13 for r in SAYLOR_HEAD)
+def cole(summoning: bool) -> Cv:
+    """Matt Cole astride the dragon, facing left, 26 x 44: navy suit with a Strive S pin, white shirt, bitcoin-orange
+    tie, the near leg down the dragon's shoulder like a rider's. summoning raises his fist (electricity crackles from
+    it)."""
+    assert all(len(r) == 12 for r in COLE_HEAD)
     cv = Cv(RIDER_W, RIDER_H)
     ox = 2
     # near leg: thigh angled down the dragon's shoulder, knee forward, shin raked back, shoe pointing ahead
@@ -291,25 +296,29 @@ def saylor(summoning: bool) -> Cv:
     cv.line(ox + 14, 18, ox + 14, 23, TIE_LO)
     cv.line(ox + 9, 15, ox + 12, 23, SUIT_HI)      # lapels
     cv.line(ox + 17, 15, ox + 14, 24, SUIT_HI)
-    cv.paste(grid(SAYLOR_HEAD, SAYLOR_PAL), ox + 6, 0)
+    for y, row in enumerate(STRIVE_S):                 # the pin, on his chest beside the lapel
+        for x, ch in enumerate(row):
+            if ch == "X":
+                cv.px(ox + 17 + x, 19 + y, C("#eef1f4"))
+    cv.paste(grid(COLE_HEAD, COLE_PAL), ox + 6, 0)
     # near arm
     if summoning:   # fist raised high, ready to crackle
         cv.fill(cv.mask_poly([(ox + 4, 19), (ox + 9, 18), (ox + 5, 9), (ox + 1, 10)]), SUIT)
         cv.line(ox + 1, 11, ox + 4, 19, SUIT_HI)
-        cv.rect(FIST[0] - 1, FIST[1] - 1, 4, 4, SAYLOR_PAL["S"])
-        cv.rect(FIST[0] - 1, FIST[1] + 2, 4, 1, SAYLOR_PAL["s"])
+        cv.rect(FIST[0] - 1, FIST[1] - 1, 4, 4, COLE_PAL["S"])
+        cv.rect(FIST[0] - 1, FIST[1] + 2, 4, 1, COLE_PAL["s"])
     else:           # hand forward on the reins
         cv.fill(cv.mask_poly([(ox + 5, 18), (ox + 10, 19), (ox + 7, 25), (ox + 1, 27), (ox, 25), (ox + 4, 22)]),
                 SUIT)
         cv.line(ox + 1, 25, ox + 5, 19, SUIT_HI)
-        cv.rect(ox - 2, 25, 3, 3, SAYLOR_PAL["S"])
-        cv.rect(ox - 2, 27, 3, 1, SAYLOR_PAL["s"])
+        cv.rect(ox - 2, 25, 3, 3, COLE_PAL["S"])
+        cv.rect(ox - 2, 27, 3, 1, COLE_PAL["s"])
     cv.outline()
     return cv
 
 
 def far_foot() -> Cv:
-    """Saylor's other foot: the leg is behind the dragon, and the shoe peeks out below its neck."""
+    """The rider's other foot: the leg is behind the dragon, and the shoe peeks out below its neck."""
     cv = Cv(10, 7)
     cv.rect(4, 0, 4, 4, SUIT_LO)
     cv.fill(cv.mask_poly([(0, 6), (0, 5), (2, 3), (8, 3), (9, 6)]), SHOE)
@@ -319,7 +328,7 @@ def far_foot() -> Cv:
 
 
 def zap() -> list[Cv]:
-    """Saylor's electricity, 8 frames in the ZAP box: small forked bolts that crackle from his raised fist, his
+    """The rider's electricity, 8 frames in the ZAP box: small forked bolts that crackle from his raised fist, his
     shoulders and his head in changing formations (and some frames dark, so it flickers). Short: none reach far."""
     z = L.ZAP
     rx, ry = L.RIDER
@@ -492,7 +501,7 @@ def dragon_frame(wing: int, breath: bool) -> Cv:
     for (x, y) in [(46, 44), (52, 50), (60, 52), (68, 52), (76, 51), (84, 51), (92, 52), (100, 55)]:  # spine ridges
         cv.fill(cv.mask_poly([(x, y + bob), (x + 2, y - 4 + bob), (x + 4, y + bob)]), red_dk)
     cv.outline()
-    cv.paste(saylor(breath), rx, ry + bob)
+    cv.paste(cole(breath), rx, ry + bob)
     cv.paste(wing_shape((78, 54 + bob), elbow, wrist, tips, (92, 60 + bob)), 0, 0)
     return cv
 
@@ -689,6 +698,42 @@ def vein(cv, rng, x, y, w, h):
         cv.px(cx - 1, cy - 1, GOLD[5])
         if rng.random() < 0.3:
             cv.px(cx + 1, cy, BTC)
+
+
+STRIVE_WORD = {  # the wordmark in its bold geometric style (the E is three bars), 8 px tall
+    "S": [".######", "#######", "##.....", "######.", ".######", ".....##", "#######", "######."],
+    "T": ["########", "########", "...##...", "...##...", "...##...", "...##...", "...##...", "...##..."],
+    "R": ["######.", "#######", "##...##", "#######", "######.", "##.##..", "##..##.", "##...##"],
+    "I": ["##"] * 8,
+    "V": ["##....##", "##....##", ".##..##.", ".##..##.", ".##..##.", "..####..", "..####..", "...##..."],
+    "E": ["#######", "#######", ".......", "#######", "#######", ".......", "#######", "#######"],
+}
+
+
+def engrave(cv, word, cx, y, tones):
+    """Carve a word into stone, centered on cx: a shadowed groove (top and left), a lit lip (bottom and right), and
+    gold inlay in the cut."""
+    gap = 2
+    width = sum(len(STRIVE_WORD[ch][0]) for ch in word) + gap * (len(word) - 1)
+    x = cx - width // 2
+    cut = np.zeros((cv.h, cv.w), bool)
+    for ch in word:
+        for dy, row in enumerate(STRIVE_WORD[ch]):
+            for dx, v in enumerate(row):
+                if v == "#":
+                    cut[y + dy, x + dx] = True
+        x += len(STRIVE_WORD[ch][0]) + gap
+    shadow = np.zeros_like(cut)
+    shadow[:-1, :] |= cut[1:, :]
+    shadow[:, :-1] |= cut[:, 1:]
+    lip = np.zeros_like(cut)
+    lip[1:, :] |= cut[:-1, :]
+    lip[:, 1:] |= cut[:, :-1]
+    cv.fill(shadow & ~cut, tones[0])
+    cv.fill(lip & ~cut & ~shadow, tones[5])
+    ys, xs = np.nonzero(cut)
+    for yy, xx in zip(ys, xs):                                        # inlay: brighter where the light catches
+        cv.a[yy, xx] = GOLD[4] if not cut[yy - 1, xx] else GOLD[3] if BAYER[yy % 4, xx % 4] > 0.3 else GOLD[2]
 
 
 def hoard(cv, rng, cx, base, rx, ry):
@@ -1002,6 +1047,7 @@ def build_cavern() -> Cv:
         prect(cv, None, x0, top, W - x0, 12 + (6 if k == 2 else 0), STONE[3 + (k % 2)])
         prect(cv, None, x0, top, W - x0, 1, STONE[5])
         prect(cv, None, x0, top + 1, W - x0, 1, GOLD[2])
+    engrave(cv, "STRIVE", L.DAIS_LOGO["cx"], L.DAIS_LOGO["y"], STONE)  # under the dragon, on the dais
     for cx, base, rx, ry in L.HOARD:
         hoard(cv, rng, cx, base, rx, ry)
     for cx, cy in L.BRAZIERS:
