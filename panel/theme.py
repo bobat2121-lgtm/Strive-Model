@@ -164,16 +164,30 @@ PAGE_CSS = f"""
 @keyframes mx-ember {{ 50% {{ box-shadow: 0 0 0 1px #2a0e06, 0 0 20px rgba(255, 120, 30, .40),
   inset 0 0 0 1px rgba(255, 176, 96, .14); }} }}
 
-.vg-hero {{ position: relative; max-width: 58%; padding: 30px 32px 26px; margin-bottom: 64px; }}
+.vg-hero {{ position: relative; width: fit-content; max-width: 58%; padding: 30px 40px 28px 32px;
+  margin-bottom: 64px; }}
 .vg-eyebrow {{ font-family: 'Silkscreen', monospace; font-size: 12px; letter-spacing: .14em; color: var(--mx-lava);
   text-transform: uppercase; }}
 .vg-hero-value {{ font-family: 'Ringbearer', serif; font-size: 88px; line-height: 1.05; color: var(--mx-gold);
   margin: 10px 0 4px; text-shadow: 0 3px 0 #4a2a08, 0 0 24px rgba(255, 170, 40, .35); }}
 .vg-hero-delta {{ font-size: 16px; color: var(--mx-ink2); }}
 .vg-hero-delta b {{ color: var(--mx-gold); }}
-.vg-chips {{ display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }}
-.vg-chip {{ font-size: 12.5px; color: var(--mx-ink2); padding: 6px 10px; border: 1px solid #6a3a1a; background: #0f0b09; }}
-.vg-chip b {{ color: var(--mx-ink); margin-left: 6px; font-weight: 600; }}
+.st-key-vg_facts details, .st-key-vg_facts [data-testid="stExpanderDetails"] {{ overflow: visible; }}
+.vg-facts {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; padding: 2px 0 8px; }}
+.vg-fact {{ position: relative; padding: 11px 14px 10px; border: 1px solid #6a3a1a; background: #0f0b09; cursor: help;
+  outline: none; animation: vg-rise .45s ease-out backwards; animation-delay: calc(var(--i) * 110ms); }}
+.vg-fact:hover, .vg-fact:focus {{ z-index: 5; border-color: var(--mx-lava); box-shadow: 0 0 10px rgba(255, 106, 19, .3); }}  /* lifted, so its tooltip covers the cells below */
+.vg-fact-label {{ font-family: 'Silkscreen', monospace; font-size: 10.5px; letter-spacing: .1em; color: var(--mx-lava);
+  text-transform: uppercase; }}
+.vg-fact-value {{ font-size: 22px; font-weight: 700; color: var(--mx-ink); margin-top: 3px; }}
+.vg-fact-i {{ position: absolute; top: 9px; right: 10px; width: 15px; height: 15px; border: 1px solid #8a5a32;
+  border-radius: 50%; font: italic 600 10px/13px Georgia, serif; text-align: center; color: #c9a77a; }}
+.vg-tip {{ position: absolute; left: -1px; right: -1px; top: calc(100% + 6px); z-index: 30; padding: 10px 12px;
+  font-size: 12.5px; line-height: 1.5; color: var(--mx-ink); background: #1e1511; border: 1px solid #c8561c;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, .65); opacity: 0; visibility: hidden; transform: translateY(-4px);
+  transition: opacity .15s, transform .15s, visibility .15s; pointer-events: none; }}
+.vg-fact:hover .vg-tip, .vg-fact:focus .vg-tip {{ opacity: 1; visibility: visible; transform: none; }}
+@keyframes vg-rise {{ from {{ opacity: 0; transform: translateY(10px); }} to {{ opacity: 1; transform: none; }} }}
 
 .vg-section {{ margin: 70px 0 14px; }}
 .vg-section-title {{ font-family: 'Ringbearer', serif; font-size: 34px; color: var(--mx-gold); text-transform: lowercase;
@@ -223,11 +237,17 @@ def _e(s: str) -> str:
     return html.escape(str(s), quote=False)
 
 
-def hero(eyebrow: str, value: str, delta_html: str, chips: list[tuple[str, str]]) -> None:
-    chips_html = "".join(f'<span class="vg-chip">{_e(k)}<b>{_e(v)}</b></span>' for k, v in chips)
+def hero(eyebrow: str, value: str, delta_html: str) -> None:
     st.html(f'<div class="vg-hero"><div class="vg-eyebrow">{_e(eyebrow)}</div>'
-            f'<div class="vg-hero-value">{_e(value)}</div><div class="vg-hero-delta">{delta_html}</div>'
-            f'<div class="vg-chips">{chips_html}</div></div>')
+            f'<div class="vg-hero-value">{_e(value)}</div><div class="vg-hero-delta">{delta_html}</div></div>')
+
+
+def facts(items: list[tuple[str, str, str]]) -> None:
+    """(label, value, explanation) cells that rise in one after another, each explaining itself on hover or tap."""
+    st.html('<div class="vg-facts">' + "".join(
+        f'<div class="vg-fact" tabindex="0" style="--i:{i}"><span class="vg-fact-i" aria-hidden="true">i</span>'
+        f'<div class="vg-fact-label">{_e(a)}</div><div class="vg-fact-value">{_e(b)}</div>'
+        f'<div class="vg-tip" role="tooltip">{_e(c)}</div></div>' for i, (a, b, c) in enumerate(items)) + "</div>")
 
 
 def section(title: str, sub: str | None = None) -> None:

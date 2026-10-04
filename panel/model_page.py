@@ -3,7 +3,7 @@ and everything else folded into one collapsed section."""
 import pandas as pd
 import streamlit as st
 
-from model import engine, metrics
+from model import engine, metrics, valuation
 from panel import charts, common, theme
 
 stt = common.current_state()
@@ -19,12 +19,7 @@ r = engine.at(res["path"], T)
 pt, p0 = v["price_target"], stt.share_price
 
 # ------------------------------------------------------------------ hero: the price target
-theme.hero(
-    f"Price target · {T:%b %d, %Y}", f"${pt:,.2f}",
-    f"<b>{pt / p0 - 1:+.0%}</b> vs ${p0:,.2f} today",
-    [("Implied mNAV", f"{v['implied_mnav']:.2f}×"), ("Growth multiple k", f"{v['k']:.2f}×"),
-     ("BTC at target", f"${r.btc_price:,.0f}"), (f"{T.year} BTC Yield", f"{v['btc_yield']:.0%}"),
-     ("Base case", f"{lv.base_cagr * 100:g}% BTC CAGR")])
+theme.hero(f"Price target · {T:%b %d, %Y}", f"${pt:,.2f}", f"<b>{pt / p0 - 1:+.0%}</b> vs ${p0:,.2f} today")
 if not res["settled"] or not res["table"]["settled"]:
     st.warning("The market mNAV couldn't be made consistent with the valuation for some settings (the multiple feeds on "
                "itself at a high k). Those table cells are blank; try a lower k or Manual market mNAV.")
@@ -50,6 +45,27 @@ theme.section(f"The path to {T:%b %Y}",
               f"is today's price (${p0:,.2f}).")
 with st.container(key="vg_chart"):
     st.altair_chart(charts.waterfall(row, f"{T:%b %Y}", c), width="stretch", theme=None)
+k_story = (f"Today's price implies {valuation.implied_k(stt):.2f}×; the model glides it to {lv.growth_multiple:.2f}× by "
+           f"{lv.k_glide_to:%b %Y}." if lv.k_glide else "Held flat at the sidebar setting.")
+with st.container(key="vg_facts"), st.expander("Key assumptions", expanded=False):
+    theme.facts([
+        ("Implied mNAV", f"{v['implied_mnav']:.2f}×",
+         f"How richly the target values Strive against what it owns: the price target ÷ NTAV per share on "
+         f"{T:%b %d, %Y}. At {v['implied_mnav']:.2f}×, a share is worth {v['implied_mnav']:.2f} times the bitcoin and "
+         f"cash behind it, after SATA. Today's mNAV is {m0:.2f}×."),
+        ("Growth multiple k", f"{v['k']:.2f}×",
+         f"How many years of bitcoin earnings investors pay for on top of NTAV, like a P/E on bitcoin earnings. "
+         f"{k_story}"),
+        ("BTC at target", f"${r.btc_price:,.0f}",
+         f"Bitcoin's assumed price on {T:%b %d, %Y}: ${lv.ye_btc_price:,.0f} at {lv.ye_anchor:%b %Y}, then growing "
+         f"{lv.base_cagr:.0%} a year. Both are levers in the sidebar."),
+        (f"{T.year} BTC Yield", f"{v['btc_yield']:.0%}",
+         f"How much the bitcoin behind each diluted share grows during {T.year}: bitcoin bought with SATA and new-share "
+         f"money, after the dilution from those new shares. Step II below turns it into dollars."),
+        ("Base case", f"{lv.base_cagr * 100:g}% BTC CAGR",
+         f"The yearly bitcoin growth rate behind the target and the chart. The sidebar sets the bands "
+         f"({', '.join(f'{b:.0%}' for b in lv.cagr_bands)}); the forecast table runs each one."),
+    ])
 
 # ------------------------------------------------------------------ how the price target is built
 year, base_btc = T.year, (v["btc_gain"] / v["btc_yield"] if v["btc_yield"] else 0.0)
