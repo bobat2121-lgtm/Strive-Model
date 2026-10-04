@@ -6,3 +6,10 @@ gatherUsageStats = false
 
 [client]
 toolbarMode = "minimal"
+
+[theme]                       # dark base for every Vault theme; panel/theme.py styles the rest
+base = "dark"
+primaryColor = "#2ea596"
+backgroundColor = "#0b0e10"
+secondaryBackgroundColor = "#141a1e"
+textColor = "#e8e4da"

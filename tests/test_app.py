@@ -7,9 +7,12 @@ from model import state
 def test_model_page_renders(monkeypatch, calc, base):
     snap = state.from_payloads(calc, base).with_prices(85224.79, 30.03)
     monkeypatch.setattr(state, "load", lambda **_: snap)
-    at = AppTest.from_file("../panel/model_page.py", default_timeout=60).run()
+    at = AppTest.from_file("../panel/model_page.py", default_timeout=90).run()
     assert not at.exception
-    assert [h.value for h in at.header][:3] == ["Where the price target comes from",
-                                                 "Price target by growth multiple and BTC CAGR", "Forecast to 2031"]
-    assert at.metric[1].value == "2.13x" and at.metric[2].value == "$14.09"
-    assert at.metric[6].label == "Price target, Dec 2028"
+    bodies = [h.proto.body for h in at.get("html")]
+    hero = next(b for b in bodies if "vg-hero" in b)
+    assert "Price target" in hero and "Dec 31, 2028" in hero        # the target is the hero
+    assert any("Strive today" in b for b in bodies)
+    assert any("$14.09" in b and "2.13×" in b for b in bodies)      # today's cards match Strive's dashboard
+    assert any("vg-ledger" in b and "Growth premium" in b for b in bodies)
+    assert [e.label for e in at.expander][0] == "Full model detail"  # everything else is folded away

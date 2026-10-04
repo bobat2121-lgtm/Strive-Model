@@ -76,19 +76,11 @@ def rate_label(lv: levers.Levers, rate_now: float) -> str:
     return f"at {rate_now:.2%} gliding to {lv.sata_rate_target:.2%} by {lv.sata_rate_glide_to:%b %d, %Y}"
 
 
-# ------------------------------------------------------------------ chart colors (validated: dataviz validate_palette.js)
-
-_PALETTE = {
-    "light": {"up": "#2a78d6", "down": "#e34948", "total": "#898781", "s1": "#2a78d6", "s2": "#eb6834",
-              "ink2": "#52514e", "muted": "#898781", "rule": "#c3c2b7"},
-    "dark": {"up": "#3987e5", "down": "#e66767", "total": "#898781", "s1": "#3987e5", "s2": "#d95926",
-             "ink2": "#c3c2b7", "muted": "#898781", "rule": "#383835"},
-}
-
+# ------------------------------------------------------------------ chart colors (from the active theme)
 
 def colors() -> dict:
-    kind = getattr(getattr(st.context, "theme", None), "type", None)
-    return _PALETTE["dark" if kind == "dark" else "light"]
+    from panel import theme
+    return theme.palette()
 
 
 # ------------------------------------------------------------------ the lever sidebar

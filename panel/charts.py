@@ -1,5 +1,6 @@
-"""Altair charts. Marks follow the dataviz spec: bars <= 24px with 4px rounded ends, 2px lines, a hover layer on every
-chart, text in ink colors (never the series color), one y-axis per chart."""
+"""Altair charts, styled by the active theme's palette (panel/theme.py). 2px lines, a hover layer on every chart, text
+in ink colors (never the series color), one y-axis per chart. The price-target waterfall uses wide bars by request.
+Render with st.altair_chart(..., theme=None) so the theme's axis colors and fonts apply."""
 from __future__ import annotations
 
 import altair as alt
@@ -8,6 +9,16 @@ import pandas as pd
 LABELS = {"btc_move": "BTC move", "amplification": "Amplification", "sata_dividends": "SATA dividends",
           "issuance": "Issuance", "op_costs": "Op. costs", "growth_premium": "Growth premium"}
 PREMIUM = {"premium_sata": "SATA premium", "premium_common": "Common premium"}  # the growth premium, by funding
+
+
+def styled(chart, c: dict):
+    """Theme the axes, legend and fonts; transparent background so the panel shows through."""
+    return (chart.configure(background="transparent", font=c["font_body"])
+            .configure_view(strokeWidth=0)
+            .configure_axis(labelColor=c["ink2"], titleColor=c["ink2"], gridColor=c["grid"], domainColor=c["grid"],
+                            tickColor=c["grid"], labelFont=c["font_body"], titleFont=c["font_body"], labelFontSize=12,
+                            titleFontSize=12, titleFontWeight="normal")
+            .configure_legend(labelColor=c["ink2"], labelFont=c["font_body"], labelFontSize=12, symbolStrokeWidth=0))
 
 
 def waterfall(row: pd.Series, when: str, c: dict) -> alt.LayerChart:
@@ -44,20 +55,24 @@ def waterfall(row: pd.Series, when: str, c: dict) -> alt.LayerChart:
     order = list(df.label)
 
     base = alt.Chart(df).encode(x=alt.X("label:N", sort=order, title=None, axis=alt.Axis(
-        labelAngle=0, labelLimit=90, labelOverlap=False, labelFontSize=11,
+        labelAngle=0, labelLimit=110, labelOverlap=False, labelFontSize=12, labelPadding=10, ticks=False,
         labelExpr="split(datum.label, ' ')")))  # two-word labels on two lines
-    bars = base.mark_bar(size=24, cornerRadius=4).encode(
+    bars = base.mark_bar(width=alt.RelativeBandSize(0.72), cornerRadius=3).encode(  # wide bars fill the band
         y=alt.Y("y0:Q", title="$ per share", axis=alt.Axis(format="$,.0f")), y2="y1:Q",
         color=alt.Color("kind:N", title=None, scale=alt.Scale(domain=["Value", "Adds", "Subtracts"],
                                                               range=[c["total"], c["up"], c["down"]]),
                         legend=alt.Legend(orient="top", direction="horizontal")),
         tooltip=[alt.Tooltip("label:N", title="Step"), alt.Tooltip("exact:N", title="$ per share"),
                  alt.Tooltip("share:Q", title="Share of the climb from NTAV today", format=".0%")])
-    labels = base.mark_text(dy=-9, fontSize=12, color=c["ink2"]).encode(y="top:Q", text="text:N")
-    ref = pd.DataFrame({"y": [float(row["today_price"])], "label": [f"Today's price ${row['today_price']:,.2f}"]})
-    rule = alt.Chart(ref).mark_rule(color=c["muted"], strokeWidth=1).encode(
-        y="y:Q", tooltip=alt.Tooltip("label:N", title="Reference"))  # named in the caption above the chart
-    return alt.layer(bars, labels, rule).properties(height=380)
+    labels = base.mark_text(dy=-10, fontSize=15, fontWeight=600, font=c["font_num"], color=c["ink"]).encode(
+        y="top:Q", text="text:N")
+    ref = pd.DataFrame({"y": [float(row["today_price"])], "label": [LABELS["op_costs"]],
+                        "text": [f"Today ${row['today_price']:,.2f}"]})
+    rule = alt.Chart(ref).mark_rule(color=c["muted"], strokeWidth=1, strokeDash=[2, 3]).encode(
+        y="y:Q", tooltip=alt.Tooltip("text:N", title="Reference"))
+    rule_label = alt.Chart(ref).mark_text(dy=-8, fontSize=11, color=c["ink2"]).encode(  # over the near-empty
+        x=alt.X("label:N", sort=order), y="y:Q", text="text:N")                       # op-costs column
+    return styled(alt.layer(rule, bars, labels, rule_label).properties(height=440), c)
 
 
 def lines(df: pd.DataFrame, series: list[str], fmt: str, c: dict, height: int = 230,
@@ -91,14 +106,14 @@ def lines(df: pd.DataFrame, series: list[str], fmt: str, c: dict, height: int = 
         last = long[long["date"] == long["date"].max()]
         layers.append(alt.Chart(last).mark_text(align="left", dx=6, fontSize=11, color=c["ink2"]).encode(
             x="date:T", y="value:Q", text="series:N"))
-    return alt.layer(*layers).properties(height=height)
+    return styled(alt.layer(*layers).properties(height=height), c)
 
 
 def weekly_bars(df: pd.DataFrame, c: dict) -> alt.LayerChart:
     """SATA vs common dollars raised per week (grouped)."""
     long = df.melt("week", ["SATA", "Common"], var_name="series", value_name="usd")
     long["text"] = (long["usd"] / 1e6).map(lambda v: f"${v:,.1f}M")
-    return alt.Chart(long).mark_bar(size=18, cornerRadiusTopLeft=4, cornerRadiusTopRight=4).encode(
+    return styled(alt.Chart(long).mark_bar(size=18, cornerRadiusTopLeft=4, cornerRadiusTopRight=4).encode(
         x=alt.X("week:N", title="Week ending", axis=alt.Axis(labelAngle=0)),
         xOffset=alt.XOffset("series:N", sort=["SATA", "Common"]),
         y=alt.Y("usd:Q", title="Raised", axis=alt.Axis(format="$~s")),
@@ -107,4 +122,4 @@ def weekly_bars(df: pd.DataFrame, c: dict) -> alt.LayerChart:
                         legend=alt.Legend(orient="top", direction="horizontal")),
         tooltip=[alt.Tooltip("week:N", title="Week ending"), alt.Tooltip("series:N", title="Security"),
                  alt.Tooltip("text:N", title="Raised")],
-    ).properties(height=300)
+    ).properties(height=300), c)

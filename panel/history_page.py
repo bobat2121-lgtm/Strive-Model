@@ -36,7 +36,7 @@ common.tiles([(label, value, None) for label, value in tiles])
 
 view = df.reset_index()
 view["week"] = pd.to_datetime(view["week"]).dt.strftime("%b %d")
-st.altair_chart(charts.weekly_bars(view.rename(columns={"sata_usd": "SATA", "common_usd": "Common"}), c),
+st.altair_chart(charts.weekly_bars(view.rename(columns={"sata_usd": "SATA", "common_usd": "Common"}), c), theme=None,
                 width="stretch")
 table = pd.DataFrame({
     "ASST VWAP": df["asst_vwap"].map(lambda v: f"${v:.2f}"),
