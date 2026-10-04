@@ -1,16 +1,17 @@
 {
-  "set_at": "2026-10-04T18:55:24+00:00",
+  "set_at": "2026-10-04T19:34:55+00:00",
   "set_by": "@WallyXIX",
-  "price_target": 198.66640488369094,
+  "price_target": 94.4009939884323,
   "levers": {
-    "ye_btc_price": 100000.0,
+    "ye_btc_price": 90000.0,
     "ye_anchor": "2026-12-31",
     "cagr_bands": [
+      0.2,
       0.3,
       0.4,
-      0.5
+      0.6
     ],
-    "base_cagr": 0.4,
+    "base_cagr": 0.3,
     "sata_weekly_usd": 70000000.0,
     "sata_switch": "2026-12-31",
     "sata_growth": 0.5,
@@ -20,7 +21,7 @@
     "reserve_months": 18.0,
     "common_weekly_pct": 0.005,
     "pt_date": "2028-12-31",
-    "growth_multiple": 3.0,
+    "growth_multiple": 1.5,
     "k_glide": true,
     "k_start": 3.35,
     "k_glide_to": "2028-12-31",
