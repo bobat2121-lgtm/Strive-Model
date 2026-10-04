@@ -1,0 +1,3 @@
+# Local work: the engine plus tests.
+-r requirements.txt
+pytest

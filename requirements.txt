@@ -1,0 +1,6 @@
+# The model engine (and later the Streamlit app). Exact versions, matching Portfolio Dashboard.
+pyyaml==6.0.3
+httpx==0.28.1
+pandas==3.0.6
+yfinance==1.7.0
+streamlit==1.64.0

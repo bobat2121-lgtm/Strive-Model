@@ -1,0 +1,42 @@
+# The model's levers. Percentages are written as percents (30 = 30%). Edit freely; `python -m model` reads this file.
+
+btc:
+  ye_price: 100000            # year-end anchor; the path runs log-linear from today's price to it
+  ye_anchor: 2026-12-31
+  cagr_bands_pct: [30, 40, 50]  # normalized BTC CAGR after the anchor; add, remove or edit bands (one table column each)
+  base_cagr_pct: 40           # the band used for single-run outputs and the attribution
+
+sata:                         # SATA is always sold at $100 par
+  weekly_usd: 70000000        # phase 1: fixed $ per week through switch_date. 6-week avg (8/21-9/25): $72.7M
+  switch_date: 2026-12-31
+  pct_of_btc_stack_weekly: 1.0  # phase 2: % of BTC NAV issued each week (null = keep weekly_usd). 1.0% holds
+                                # amplification near 50% at 40% BTC CAGR, but needs ~$130M/wk by YE27, ~$360M/wk by YE28
+  glide_weeks: 13             # blend from weekly_usd to the % over this many weeks after the switch
+  rate_pct: null              # null = Strive's current rate (13.00%), the starting point
+  rate_target_pct: null       # null = hold the rate static; a number glides the rate to it by rate_glide_to
+  rate_glide_to: 2027-12-31
+  reserve_months: 18          # Strive keeps 18 months of SATA dividends in cash, ~19.5% of each raise at 13%
+
+common:
+  weekly_pct: 0.5             # new shares per week as % of FD shares. 6-week avg 1.86% (front-loaded); last 3 weeks ~0.5%
+
+valuation:                    # TD Cowen's structure: price target = NTAV per share + k x next year's gain per share
+  price_target_date: 2028-12-31
+  growth_multiple: 3          # k. TD Cowen uses 3x on ASST; today's price implies ~1.5x on next year's net gain
+  gain_basis: net             # net = growth in net BTC per share (NTAV / BTC price), the gain that belongs to common;
+                              # gross = Strive's BTC Yield, which counts SATA-funded BTC as gain (TD Cowen's literal input)
+  table: [1, 2, 3, 4, 5]      # rows of the price-target table (k)
+
+mnav:                         # market mNAV during the forecast (ASST / NTAV per diluted share, 2.13x on 10/4/26):
+  target: null                # the price new common sells at. null = hold today's; a number glides to it by glide_to
+  glide_to: 2026-12-31
+
+warrants:                     # PIPE warrants (25.35M at 9/25)
+  exercise_date: 2026-10-13   # per CEO post on X; not yet in a filing
+  exercise_pct: 100           # share exercised if ASST is above the strike that week; the rest lapse
+  strike: 27.0
+
+costs:
+  net_cash_burn_weekly_usd: 1200000   # cash opex less fee revenue, ~$15.5M a quarter (Q2-26 10-Q)
+
+horizon_end: 2031-12-31       # the forecast runs past the price target so its forward year exists
