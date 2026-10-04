@@ -3,22 +3,28 @@ into static/, served by Streamlit's static file serving).
 
 The scene sits fixed behind the page and descends as you scroll: a CSS scroll timeline on Streamlit's main scroll
 container drives it, so the throne hall (a dragon on its hoard, Michael Saylor riding it) is at the top and the deep
-(where the lava runs into a half-hidden bitcoin sigil) is at the bottom. Everything moves with CSS only: lava frames,
+(where the lava runs round a glowing ring and through a bitcoin sigil) is at the bottom. Everything moves with CSS only: lava frames,
 dwarves mining and pacing the walkways, sparkles in the gold, and the dragon, which flaps idly, breathes fire every
-so often (Saylor points, laser-eyed) and now and then spins round. prefers-reduced-motion stills it all.
+so often from the middle of its mouth (Saylor raises a fist and crackles with electricity) and now and then spins
+round. prefers-reduced-motion stills it all.
 
 Information panels stay distinct from the scene: opaque dark stone with a light lava border. Headings use the
 Ringbearer font (static/fonts/ringbearer, freeware for non-commercial use, kept with its original archive files).
 """
 from __future__ import annotations
 
+import hashlib
 import html
+from pathlib import Path
 
 import streamlit as st
 
 from panel import mine_layout as L
 
 ART = "/app/static/mine"
+# a version stamp on every image URL, so browsers fetch new art when it changes (static files have no cache policy)
+V = hashlib.md5(b"".join(f.read_bytes() for f in sorted(
+    (Path(__file__).parents[1] / "static" / "mine").glob("*.png")))).hexdigest()[:8]
 FONT = "/app/static/fonts/ringbearer/RingbearerMedium-51mgZ.ttf"
 PAL = {"bg": "#07080d", "surface": "#15100d", "ink": "#f3e6cf", "ink2": "#cdb994", "muted": "#9a8a72",
        "gold": "#f2c14e", "lava": "#ff6a13", "grid": "#2a211b",
@@ -34,6 +40,17 @@ def palette() -> dict:
 
 # ------------------------------------------------------------------ the scene
 
+def _in_dragon(x, y, w, h) -> str:
+    """Position in percent of the dragon sprite (its own 128 x 100 pixels), for what rides along with it."""
+    d = L.DRAGON
+    return (f"left: {x / d['w'] * 100:.4f}%; top: {y / d['h'] * 100:.4f}%; "
+            f"width: {w / d['w'] * 100:.4f}%; height: {h / d['h'] * 100:.4f}%;")
+
+
+FIRE_BOX = _in_dragon(L.MOUTH[0] - L.FIRE["w"] + 1, L.MOUTH[1] - L.FIRE["h"] / 2, L.FIRE["w"], L.FIRE["h"])
+ZAP_BOX = _in_dragon(L.ZAP["x"], L.ZAP["y"], L.ZAP["w"], L.ZAP["h"])
+
+
 def _box(x, y, w, h) -> str:
     """Position in percent of the world (the 480 x 1200 cavern), so everything scales with it."""
     return (f"left:{x / L.SCENE_W * 100:.4f}%;top:{y / L.SCENE_H * 100:.4f}%;"
@@ -46,27 +63,28 @@ def _scene_html() -> tuple[str, str]:
                   '<div class="mx-layer mx-cavern"></div><div class="mx-layer mx-lava"></div>'], []
     for i, m in enumerate(L.MINERS):
         parts.append(f'<div class="mx-sprite mx-loop{" mx-flip" if m["flip"] else ""}" style="{_box(m["x"], m["y"], 18, 17)};'
-                     f'background-image:url({ART}/{m["sheet"]}.png);animation-duration:{m["dur"]}s;'
+                     f'background-image:url({ART}/{m["sheet"]}.png?v={V});animation-duration:{m["dur"]}s;'
                      f'animation-delay:{m["delay"]}s"></div>')
     for i, wk in enumerate(L.WALKERS + L.CARTS):
         is_cart = wk in L.CARTS
         w = 34 if is_cart else 18
         parts.append(f'<div class="mx-pace" style="{_box(wk["x0"], wk["y"], w, 17)};animation-name:mx-pace-{i};'
                      f'animation-duration:{wk["dur"]}s;animation-delay:{wk["delay"]}s"><div class="mx-sprite mx-loop '
-                     f'mx-turn" style="left:0;top:0;width:100%;height:100%;background-image:url({ART}/{wk["sheet"]}.png);'
+                     f'mx-turn" style="left:0;top:0;width:100%;height:100%;background-image:url({ART}/{wk["sheet"]}.png?v={V});'
                      f'animation-duration:0.7s,{wk["dur"]}s;animation-delay:0s,{wk["delay"]}s"></div></div>')
         css.append(f"@keyframes mx-pace-{i} {{ 0%, 100% {{ left: {wk['x0'] / L.SCENE_W * 100:.4f}%; }} "
                    f"50% {{ left: {wk['x1'] / L.SCENE_W * 100:.4f}%; }} }}")
     s = L.SMITH
     parts.append(f'<div class="mx-sprite mx-loop" style="{_box(s["x"], s["y"], 18, 17)};'
-                 f'background-image:url({ART}/{s["sheet"]}.png);animation-duration:{s["dur"]}s"></div>')
+                 f'background-image:url({ART}/{s["sheet"]}.png?v={V});animation-duration:{s["dur"]}s"></div>')
     for x, y, delay in L.SPARKLES:
         parts.append(f'<div class="mx-sparkle" style="{_box(x - 2, y - 2, 5, 5)};animation-delay:{delay}s"></div>')
     d = L.DRAGON
     parts.append(
         f'<div class="mx-dragon" style="{_box(d["x"], d["y"], d["w"], d["h"])}"><div class="mx-spin">'
         f'<div class="mx-sprite mx-dragon-idle"></div><div class="mx-sprite mx-dragon-breath"></div>'
-        f'<div class="mx-sprite mx-fire"></div><div class="mx-laser"></div></div></div>')
+        f'<div class="mx-sprite mx-fire"></div><div class="mx-sprite mx-zap"></div>'
+        f'<div class="mx-sprite mx-zap mx-zap-b"></div></div></div>')
     parts.append("</div></div>")
     return "".join(parts), "\n".join(css)
 
@@ -79,14 +97,15 @@ SCENE_CSS = f"""
 .mx-world {{ position: absolute; left: 0; top: 0; width: 100vw; aspect-ratio: {L.SCENE_W} / {L.SCENE_H};
   animation: mx-descend linear both; animation-timeline: --mx; }}
 @keyframes mx-descend {{ from {{ transform: translateY(0); }} to {{ transform: translateY(calc(-100% + 100vh)); }} }}
-.mx-layer, .mx-sprite, .mx-sparkle, .mx-laser {{ position: absolute; image-rendering: pixelated;
+.mx-layer, .mx-sprite, .mx-sparkle {{ position: absolute; image-rendering: pixelated;
   background-repeat: no-repeat; }}
 .mx-layer {{ inset: 0; }}
-.mx-cavern {{ background: url({ART}/cavern.png) 0 0 / 100% 100%; }}
-.mx-lava {{ background-image: url({ART}/lava.png); background-size: 400% 100%;
+.mx-cavern {{ background: url({ART}/cavern.png?v={V}) 0 0 / 100% 100%; }}
+.mx-lava {{ background-image: url({ART}/lava.png?v={V}); background-size: 400% 100%;
   animation: mx-frames-4 .9s steps(4) infinite; }}
 @keyframes mx-frames-4 {{ to {{ background-position-x: 133.333%; }} }}
 @keyframes mx-frames-2 {{ to {{ background-position-x: 200%; }} }}
+@keyframes mx-frames-8 {{ to {{ background-position-x: 114.2857%; }} }}
 .mx-loop {{ background-size: 400% 100%; animation-name: mx-frames-4; animation-timing-function: steps(4);
   animation-iteration-count: infinite; }}
 .mx-flip {{ transform: scaleX(-1); }}
@@ -94,7 +113,7 @@ SCENE_CSS = f"""
 .mx-turn {{ animation-name: mx-frames-4, mx-turn; animation-timing-function: steps(4), step-end;
   animation-iteration-count: infinite; }}
 @keyframes mx-turn {{ 0% {{ transform: scaleX(1); }} 50% {{ transform: scaleX(-1); }} }}
-.mx-sparkle {{ background: url({ART}/sparkle.png) 0 0 / 400% 100%; opacity: 0;
+.mx-sparkle {{ background: url({ART}/sparkle.png?v={V}) 0 0 / 400% 100%; opacity: 0;
   animation: mx-twinkle 4.2s steps(1) infinite; }}
 @keyframes mx-twinkle {{ 0%, 70% {{ opacity: 0; background-position-x: 0%; }} 74% {{ opacity: 1; background-position-x: 33.333%; }}
   78% {{ opacity: 1; background-position-x: 66.667%; }} 82% {{ opacity: 1; background-position-x: 100%; }}
@@ -103,16 +122,17 @@ SCENE_CSS = f"""
 .mx-spin {{ position: absolute; inset: 0; animation: mx-spin 41s ease-in-out infinite; transform-style: preserve-3d; }}
 @keyframes mx-spin {{ 0%, 66% {{ transform: rotateY(0deg); }} 70% {{ transform: rotateY(360deg); }} 100% {{ transform: rotateY(360deg); }} }}
 .mx-dragon-idle, .mx-dragon-breath {{ inset: 0; }}
-.mx-dragon-idle {{ background-image: url({ART}/dragon.png); background-size: 400% 100%;
+.mx-dragon-idle {{ background-image: url({ART}/dragon.png?v={V}); background-size: 400% 100%;
   animation: mx-frames-4 .9s steps(4) infinite, mx-idle-show 23s steps(1) infinite, mx-bob 3s ease-in-out infinite; }}
-.mx-dragon-breath {{ background-image: url({ART}/dragon_breath.png); background-size: 200% 100%; opacity: 0;
+.mx-dragon-breath {{ background-image: url({ART}/dragon_breath.png?v={V}); background-size: 200% 100%; opacity: 0;
   animation: mx-frames-2 .5s steps(2) infinite, mx-breath-show 23s steps(1) infinite; }}
-.mx-fire {{ left: -51.6%; top: 16%; width: 59.4%; height: 30%; background-image: url({ART}/fire.png);
+.mx-fire {{ {FIRE_BOX} background-image: url({ART}/fire.png?v={V});
   background-size: 400% 100%; opacity: 0; transform-origin: right center;
   animation: mx-frames-4 .36s steps(4) infinite, mx-breath-show 23s steps(1) infinite; }}
-.mx-laser {{ left: -19.5%; top: 34%; width: 62.5%; height: 5%; background: url({ART}/laser.png) 0 0 / 100% 100%;
-  opacity: 0; transform: rotate(9deg); transform-origin: right center;
-  animation: mx-breath-show 23s steps(1) infinite; filter: drop-shadow(0 0 3px rgba(255, 60, 30, .9)); }}
+.mx-zap {{ {ZAP_BOX} background-image: url({ART}/zap.png?v={V}); background-size: 800% 100%; opacity: 0;
+  animation: mx-frames-8 1.2s steps(8) infinite, mx-breath-show 23s steps(1) infinite;
+  filter: drop-shadow(0 0 1px rgba(170, 225, 255, .95)) drop-shadow(0 0 5px rgba(80, 160, 255, .7)); }}
+.mx-zap-b {{ animation-duration: 1.7s, 23s; animation-delay: -.7s, 0s; }}  /* out of step: the formations vary */
 @keyframes mx-idle-show {{ 0%, 82% {{ opacity: 1; }} 83%, 94% {{ opacity: 0; }} 95%, 100% {{ opacity: 1; }} }}
 @keyframes mx-breath-show {{ 0%, 82% {{ opacity: 0; }} 83%, 94% {{ opacity: 1; }} 95%, 100% {{ opacity: 0; }} }}
 @keyframes mx-bob {{ 50% {{ translate: 0 -1.2%; }} }}

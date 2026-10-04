@@ -1,6 +1,7 @@
 """Pixel-art assets for the "Mine" theme: a dwarven gold mine under the mountain. Lava runs through irrigation canals
 and pours into a half-hidden bitcoin sigil; dwarves work galleries and walkways; a dragon broods on a hoard at the top
-with Michael Saylor riding it (bald, navy suit, bitcoin-orange tie, laser eyes when it breathes fire).
+with Michael Saylor riding it (silver hair, gray beard, navy suit, bitcoin-orange tie; he crackles with electricity
+when it breathes fire).
 
 Everything is drawn here, pixel by pixel, at low resolution and scaled up crisply in the browser
 (image-rendering: pixelated). Deterministic: the same seed always draws the same mine.
@@ -11,6 +12,7 @@ from __future__ import annotations
 
 import math
 import random
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -18,6 +20,8 @@ from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "static" / "mine"
+sys.path.insert(0, str(ROOT))
+from panel import mine_layout as L  # noqa: E402
 W, H = 480, 1200  # the cavern, in art pixels (shown ~3x)
 
 
@@ -231,51 +235,153 @@ def sparkle() -> list[Cv]:
 
 # ------------------------------------------------------------------ sprite: Michael Saylor on the dragon
 
-SAYLOR_PAL = {"k": OUTLINE, "S": C("#ffe4cc"), "s": C("#f2c4a0"), "h": C("#c98f6b"), "e": C("#2a1a14"),
-              "m": C("#9a3f30"), "w": C("#f4f4ef"), "W": C("#cfd2d6"), "n": C("#1c2440"), "N": C("#33416b"),
-              "o": BTC, "O": C("#c46a08"), "r": C("#ff3b1f")}
-SAYLOR = [  # 18 x 23, facing left; bald, smiling, navy suit with lapels, white shirt, bitcoin-orange tie
-    "......kkkkk.......",
-    "....kkSSSSSkk.....",
-    "...kSSSSSSsssk....",
-    "..kSSSSssssssshk..",
-    "..kSSsssssssssshk.",
-    ".ksbbbssssssssshk.",
-    ".kswessssssshhshk.",
-    "kssssssssssshkhk..",
-    ".kssssssssssshk...",
-    ".ksmwwmsssssshk...",
-    "..ksmmsssssshk....",
-    "...kkssssshhk.....",
-    "....kkhhhhkk......",
-    "...kwwwooowwk.....",
-    "..knNwwoowwNnk....",
-    ".knnNnwoownNnnk...",
-    ".knnnNnoonNnnnk...",
-    "knnnnNnoonNnnnnk..",
-    "knnnnnNooNnnnnnk..",
-    "knnnnnnOOnnnnnnk..",
-    "knnnnnnnnnnnnnnk..",
-    ".knnnnnnnnnnnnk...",
-    ".kkkkkkkkkkkkkk...",
+SAYLOR_PAL = {"k": OUTLINE, "H": C("#e9e9ec"), "h": C("#b9bcc2"), "g": C("#7e828b"),     # silver hair
+              "S": C("#f3c6a8"), "s": C("#dc9f82"), "d": C("#b2735c"),                     # skin
+              "b": C("#6a6e76"), "e": C("#5b86b0"), "w": C("#f4f1ea"),                     # brows, pale blue eyes
+              "B": C("#ece8e0"), "c": C("#c3bcb1"), "C": C("#8f887e"), "m": C("#9a5548")}  # gray beard, lips
+SAYLOR_HEAD = [  # 13 x 16, three-quarter view facing left: silver hair swept from a side part, short gray beard
+    "....kkkkkk...",
+    "..kkHHHHHHkk.",
+    ".kHHHHHHHHHhk",
+    "kHHHHHHHHHhhk",
+    "kHHHHHHHHhhgk",
+    "kHHHhSSSSShgk",
+    "khhSSSSSSSsgk",
+    "kSbbbSSbbbsgk",
+    "kSewSSSewsddk",
+    "kSSSSsSSSsdhk",
+    "kcSSSssSSscdk",
+    "kBBccccBBcCdk",
+    "kBBmmmBBBcCk.",
+    ".kBBBBBBBcCk.",
+    "..kcBBBBcCk..",
+    "...kkkkkkk...",
 ]
-SAYLOR_PAL["b"] = C("#7a5a44")  # brows
+SUIT, SUIT_HI, SUIT_LO = C("#1b2236"), C("#34405f"), C("#10141f")
+SHIRT, SHIRT_LO, TIE, TIE_LO = C("#f4f4ef"), C("#c6cad1"), BTC, C("#c46a08")
+SHOE, SHOE_HI = C("#121212"), C("#3c3c3c")
+RIDER_W, RIDER_H = 26, 44
+FIST = (3, 7)        # where the raised fist is in the breath pose (rider pixels): the electricity starts here
 
 
-def saylor(pointing: bool) -> Cv:
-    assert all(len(r) == 18 for r in SAYLOR)
-    out = Cv(30, 23)
-    out.paste(grid(SAYLOR, SAYLOR_PAL), 10, 0)
-    sleeve, sleeve_hi, hand = SAYLOR_PAL["n"], SAYLOR_PAL["N"], SAYLOR_PAL["s"]
-    if pointing:  # arm thrust forward, finger out
-        out.rect(2, 15, 11, 3, sleeve)
-        out.rect(2, 15, 11, 1, sleeve_hi)
-        out.rect(0, 15, 3, 2, hand)
-    else:  # hand on the reins
-        out.rect(6, 17, 7, 3, sleeve)
-        out.rect(6, 17, 7, 1, sleeve_hi)
-        out.rect(3, 18, 3, 2, hand)
-    return out
+def saylor(summoning: bool) -> Cv:
+    """Michael Saylor astride the dragon, facing left, 26 x 44: navy suit, white shirt, bitcoin-orange tie, the near
+    leg down the dragon's shoulder like a rider's. summoning raises his fist (the electricity crackles from it)."""
+    assert all(len(r) == 13 for r in SAYLOR_HEAD)
+    cv = Cv(RIDER_W, RIDER_H)
+    ox = 2
+    # near leg: thigh angled down the dragon's shoulder, knee forward, shin raked back, shoe pointing ahead
+    cv.fill(cv.mask_poly([(ox + 6, 26), (ox + 19, 26), (ox + 19, 31), (ox + 11, 33), (ox + 6, 37), (ox + 1, 36),
+                          (ox + 1, 32)]), SUIT)
+    cv.fill(cv.mask_poly([(ox + 1, 35), (ox + 6, 35), (ox + 8, 41), (ox + 3, 41)]), SUIT)
+    cv.line(ox + 1, 32, ox + 1, 35, SUIT_HI)
+    cv.line(ox + 2, 36, ox + 3, 40, SUIT_HI)
+    cv.line(ox + 11, 32, ox + 18, 30, SUIT_LO)
+    cv.fill(cv.mask_poly([(ox, 43), (ox, 42), (ox + 2, 40), (ox + 8, 40), (ox + 9, 43)]), SHOE)
+    cv.rect(ox + 1, 41, 3, 1, SHOE_HI)
+    # jacket, shirt, tie
+    cv.fill(cv.mask_poly([(ox + 6, 17), (ox + 9, 15), (ox + 18, 15), (ox + 21, 18), (ox + 21, 29), (ox + 5, 29),
+                          (ox + 4, 19)]), SUIT)
+    cv.rect(ox + 19, 18, 2, 11, SUIT_LO)
+    cv.rect(ox + 5, 20, 1, 9, SUIT_HI)
+    cv.fill(cv.mask_poly([(ox + 9, 14), (ox + 16, 14), (ox + 12.5, 23)]), SHIRT)
+    cv.line(ox + 15, 15, ox + 13, 21, SHIRT_LO)
+    cv.rect(ox + 12, 15, 2, 2, TIE)
+    cv.fill(cv.mask_poly([(ox + 11.5, 17), (ox + 14, 17), (ox + 14.5, 23), (ox + 12.7, 25.5), (ox + 11, 23)]), TIE)
+    cv.line(ox + 14, 18, ox + 14, 23, TIE_LO)
+    cv.line(ox + 9, 15, ox + 12, 23, SUIT_HI)      # lapels
+    cv.line(ox + 17, 15, ox + 14, 24, SUIT_HI)
+    cv.paste(grid(SAYLOR_HEAD, SAYLOR_PAL), ox + 6, 0)
+    # near arm
+    if summoning:   # fist raised high, ready to crackle
+        cv.fill(cv.mask_poly([(ox + 4, 19), (ox + 9, 18), (ox + 5, 9), (ox + 1, 10)]), SUIT)
+        cv.line(ox + 1, 11, ox + 4, 19, SUIT_HI)
+        cv.rect(FIST[0] - 1, FIST[1] - 1, 4, 4, SAYLOR_PAL["S"])
+        cv.rect(FIST[0] - 1, FIST[1] + 2, 4, 1, SAYLOR_PAL["s"])
+    else:           # hand forward on the reins
+        cv.fill(cv.mask_poly([(ox + 5, 18), (ox + 10, 19), (ox + 7, 25), (ox + 1, 27), (ox, 25), (ox + 4, 22)]),
+                SUIT)
+        cv.line(ox + 1, 25, ox + 5, 19, SUIT_HI)
+        cv.rect(ox - 2, 25, 3, 3, SAYLOR_PAL["S"])
+        cv.rect(ox - 2, 27, 3, 1, SAYLOR_PAL["s"])
+    cv.outline()
+    return cv
+
+
+def far_foot() -> Cv:
+    """Saylor's other foot: the leg is behind the dragon, and the shoe peeks out below its neck."""
+    cv = Cv(10, 7)
+    cv.rect(4, 0, 4, 4, SUIT_LO)
+    cv.fill(cv.mask_poly([(0, 6), (0, 5), (2, 3), (8, 3), (9, 6)]), SHOE)
+    cv.rect(1, 4, 3, 1, SHOE_HI)
+    cv.outline()
+    return cv
+
+
+def zap() -> list[Cv]:
+    """Saylor's electricity, 8 frames in the ZAP box: small forked bolts that crackle from his raised fist, his
+    shoulders and his head in changing formations (and some frames dark, so it flickers). Short: none reach far."""
+    z = L.ZAP
+    rx, ry = L.RIDER
+    fist = (rx + FIST[0] - z["x"], ry + FIST[1] - z["y"])
+    head = (rx + 14 - z["x"], ry - z["y"])
+    back = (rx + 22 - z["x"], ry + 18 - z["y"])
+    chest = (rx + 8 - z["x"], ry + 20 - z["y"])
+    core, inner, halo = (255, 255, 255, 255), (190, 236, 255, 255), (100, 185, 255, 170)
+
+    def bolt(cv, start, ang, length, rnd, branch=True):
+        a = math.radians(ang + rnd.uniform(-12, 12))
+        ux, uy, sign = math.cos(a), math.sin(a), rnd.choice((-1, 1))
+        pts = [start]
+        for i in range(1, int(length / 2.5) + 1):   # step along the bolt, kicking out left and right in turn
+            d, kick = i * 2.5, sign * rnd.uniform(1.0, 2.2) * (1 if i % 2 else -1)
+            pts.append((start[0] + ux * d - uy * kick, start[1] + uy * d + ux * kick))
+        for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
+            for dx, dy in ((1, 0), (0, 1)):
+                cv.line(x0 + dx, y0 + dy, x1 + dx, y1 + dy, halo)
+        for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
+            cv.line(x0, y0, x1, y1, inner)
+        for (px_, py_) in pts[1::2]:
+            cv.px(px_, py_, core)
+        if branch and len(pts) > 3:
+            bolt(cv, pts[len(pts) // 2], ang + rnd.choice((-55, 55)), length * 0.45, rnd, branch=False)
+
+    def arc(cv, p, q, rnd):  # a crackle jumping between two points on him
+        n = 5
+        pts = [p] + [(p[0] + (q[0] - p[0]) * i / n + rnd.uniform(-2, 2), p[1] + (q[1] - p[1]) * i / n
+                      + rnd.uniform(-2, 2)) for i in range(1, n)] + [q]
+        for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
+            for dx, dy in ((1, 0), (0, 1)):
+                cv.line(x0 + dx, y0 + dy, x1 + dx, y1 + dy, halo)
+            cv.line(x0, y0, x1, y1, inner)
+
+    def sparks(cv, at, rnd, n=4):
+        for _ in range(n):
+            cv.px(at[0] + rnd.randint(-4, 4), at[1] + rnd.randint(-4, 4), core if rnd.random() < 0.5 else inner)
+
+    plan = [  # bolts per frame as (source, angle, length); None is a dark frame
+        [(fist, -120, 10), (fist, 200, 8)],
+        None,
+        [(head, -80, 7), (back, -20, 7), ("sparks", fist)],
+        [(fist, -150, 9), (fist, -95, 8), (fist, 160, 6)],
+        None,
+        [("sparks", fist), ("sparks", head)],
+        [("arc", fist, head), (back, 30, 7)],
+        [(chest, 150, 6), (head, -110, 6)],
+    ]
+    frames = []
+    for i, bolts in enumerate(plan):
+        cv = Cv(z["w"], z["h"])
+        rnd = random.Random(500 + i)
+        for b in bolts or []:
+            if b[0] == "sparks":
+                sparks(cv, b[1], rnd)
+            elif b[0] == "arc":
+                arc(cv, b[1], b[2], rnd)
+            else:
+                bolt(cv, *b, rnd)
+        frames.append(cv)
+    return frames
 
 
 def _bezier(p0, p1, p2, n):
@@ -333,6 +439,8 @@ def dragon_frame(wing: int, breath: bool) -> Cv:
     sh = lambda p: (p[0] + off[0], p[1] + off[1])
     cv.paste(wing_shape(sh((78, 54 + bob)), sh(elbow), sh(wrist), [sh(t) for t in tips], sh((92, 60 + bob)), dark=True),
              0, 0)
+    rx, ry = L.RIDER
+    cv.paste(far_foot(), rx - 11, ry + 37 + bob)
     # tail: rests on the hoard, curling forward under the dragon
     tail_pts = _bezier((104, 74 + bob), (128, 98), (78, 97), 16)
     for i, (x, y) in enumerate(tail_pts):
@@ -384,15 +492,14 @@ def dragon_frame(wing: int, breath: bool) -> Cv:
     for (x, y) in [(46, 44), (52, 50), (60, 52), (68, 52), (76, 51), (84, 51), (92, 52), (100, 55)]:  # spine ridges
         cv.fill(cv.mask_poly([(x, y + bob), (x + 2, y - 4 + bob), (x + 4, y + bob)]), red_dk)
     cv.outline()
-    rider = saylor(breath)
-    rider.outline()
-    cv.paste(rider, 42, 30 + bob)
+    cv.paste(saylor(breath), rx, ry + bob)
     cv.paste(wing_shape((78, 54 + bob), elbow, wrist, tips, (92, 60 + bob)), 0, 0)
     return cv
 
 
 def fire() -> list[Cv]:
-    """A cone of dragon fire, 76 x 30, pointing left (attaches at the right edge): banded core, flicker, embers."""
+    """A cone of dragon fire, 76 x 30, pointing left (its root, the middle of the right edge, sits at the dragon's
+    MOUTH): banded core, flicker, embers."""
     out = []
     for f in range(4):
         rnd = random.Random(40 + f)
@@ -400,7 +507,7 @@ def fire() -> list[Cv]:
         for x in range(76):
             reach = (75 - x) / 75  # 0 at the mouth (right edge), 1 at the tip
             wob = math.sin(x * 0.45 + f * 1.7) * 1.2
-            half = 1.5 + reach * (10 + f * 0.6)
+            half = 2.5 + reach * (10 + f * 0.6)
             for y in range(30):
                 d = abs(y - 15 - wob * reach) / half
                 if d > 1:
@@ -417,18 +524,6 @@ def fire() -> list[Cv]:
     return out
 
 
-def laser() -> Cv:
-    """Saylor's laser eyes: two thin beams, 80 x 5, from the right edge."""
-    cv = Cv(80, 5)
-    for x in range(80):
-        a = 255 if x > 8 else 120 + x * 16
-        cv.px(x, 1, (255, 70, 40, a))
-        cv.px(x, 3, (255, 70, 40, a))
-        if x % 3 == 0:
-            cv.px(x, 2, (255, 190, 150, 120))
-    return cv
-
-
 def build_sprites() -> dict[str, Image.Image]:
     s = {}
     s["miner_a"] = sheet(dwarf_miner(0, 0))
@@ -441,18 +536,13 @@ def build_sprites() -> dict[str, Image.Image]:
     s["cart"] = sheet(cart_pusher(0, 3))
     s["sparkle"] = sheet(sparkle())
     s["dragon"] = sheet([dragon_frame(w, False) for w in range(4)])
-    s["dragon_breath"] = sheet([dragon_frame(w, True) for w in (1, 2)])
+    s["dragon_breath"] = sheet([dragon_frame(w, True) for w in (0, 2)])  # head held level: fire stays in the mouth
     s["fire"] = sheet(fire())
-    s["laser"] = laser().image()
+    s["zap"] = sheet(zap())
     return s
 
 
 # ------------------------------------------------------------------ the cavern
-
-import sys  # noqa: E402
-
-sys.path.insert(0, str(ROOT))
-from panel import mine_layout as L  # noqa: E402
 
 BTC_GLYPH = [  # the bitcoin B, carved into the sigil (scaled 2x)
     "..#.#......",
@@ -672,15 +762,80 @@ def statue(cv, x, y, tones):
 
 
 def sigil(cv, cx, cy, r, tones):
-    """A carved stone seal. Its grooves form the bitcoin B; the lava layer fills them."""
+    """A carved stone seal: a ring channel inside the rim and grooves in the shape of the bitcoin B, with channels in
+    from the fall and out to the floor. The lava layer fills them all (sigil_flow)."""
+    groove = C("#120a08")
+    flow = sigil_flow()
     cv.fill(cv.mask_ellipse(cx, cy, r, r), tones[4])
-    cv.fill(cv.mask_ellipse(cx, cy, r - 3, r - 3), tones[2])
-    cv.fill(cv.mask_ellipse(cx, cy, r - 5, r - 5), tones[3])
+    cv.fill(cv.mask_ellipse(cx, cy, r - 2, r - 2), groove)            # the ring channel
+    cv.fill(cv.mask_ellipse(cx, cy, r - 7, r - 7), tones[3])          # the inner disc
+    cv.fill(cv.mask_ellipse(cx, cy, r - 7, r - 7) & ~cv.mask_ellipse(cx, cy, r - 8, r - 8), tones[4])
     for k in range(16):
         a = k * math.pi / 8
-        cv.px(cx + (r - 2) * math.cos(a), cy + (r - 2) * math.sin(a), GOLD[2])
+        cv.px(cx + (r - 1) * math.cos(a), cy + (r - 1) * math.sin(a), GOLD[2])
+    for part in ("inflow", "feeders", "outflow"):                     # each channel in a groove a pixel wider
+        for x, y in flow[part]:
+            cv.rect(x - 1, y - 1, 3, 3, groove)
     for gx, gy in glyph_cells(cx, cy):
-        cv.px(gx, gy, C("#120a08"))
+        cv.px(gx, gy, groove)
+
+
+def _channel(points, half_w, s0=0.0):
+    """Pixels within half_w of a polyline, each with s = s0 + the distance along the line to its nearest point."""
+    pts = np.array(points, float)
+    seg = np.r_[0, np.cumsum(np.hypot(*np.diff(pts, axis=0).T))]
+    dense = np.linspace(0, seg[-1], max(int(seg[-1] * 4), 2))
+    px_ = np.interp(dense, seg, pts[:, 0])
+    py_ = np.interp(dense, seg, pts[:, 1])
+    out = {}
+    for y in range(int(py_.min() - half_w - 1), int(py_.max() + half_w + 2)):
+        for x in range(int(px_.min() - half_w - 1), int(px_.max() + half_w + 2)):
+            d = np.hypot(px_ - x, py_ - y)
+            i = int(d.argmin())
+            if d[i] <= half_w:
+                out[(x, y)] = s0 + dense[i]
+    return out
+
+
+def sigil_flow() -> dict[str, dict]:
+    """Where the lava runs through the seal, as {part: {(x, y): s}} with s the distance along the flow in pixels: in
+    from the last fall to the ring; both ways round the ring to its foot; down two feeders into the top of the B,
+    through it and out its bottom back to the ring; and out of the ring's foot to the floor canal."""
+    cx, cy, r = L.SIGIL["cx"], L.SIGIL["cy"], L.SIGIL["r"]
+    rr = r - 4.5                                                      # the ring channel's middle radius
+    th_in, th_out = math.radians(-50), math.radians(90)
+    fx, _, fy1, fw = L.FALLS[-1]
+    inlet = (cx + rr * math.cos(th_in), cy + rr * math.sin(th_in))
+    path = _bezier((fx + fw / 2 - 0.5, fy1 - 2), (fx + fw / 2, fy1 + 10), inlet, 24)
+    inflow = _channel(path, 1.2)
+    lead = max(inflow.values())
+    inflow = {k: v - lead for k, v in inflow.items()}                 # s is 0 where the lava meets the ring
+
+    def ring_s(x, y):                                                 # both streams run from the inlet to the foot
+        th = math.atan2(y - cy, x - cx)
+        cw = (th - th_in) % (2 * math.pi)
+        return rr * (cw if cw <= (th_out - th_in) % (2 * math.pi) else (th_in - th) % (2 * math.pi))
+
+    ring = {}
+    for y in range(int(cy - r), int(cy + r) + 1):
+        for x in range(int(cx - r), int(cx + r) + 1):
+            if abs(math.hypot(x - cx, y - cy) - rr) <= 1.5:
+                ring[(x, y)] = ring_s(x, y)
+    top_y, bot_y = int(cy - rr + 1), int(cy + rr - 1)
+    feeders, glyph = {}, {}
+    for x in (cx - 7, cx - 6, cx - 3, cx - 2):                        # the B's top and bottom ticks
+        s_top = ring_s(x, top_y)
+        for y in range(top_y, cy - 14):
+            feeders[(x, y)] = s_top + (y - top_y)
+        for y in range(cy + 14, bot_y + 1):
+            feeders[(x, y)] = s_top + (y - top_y)
+    s_glyph = ring_s(cx - 5, top_y) - top_y
+    for x, y in glyph_cells(cx, cy):
+        glyph[(x, y)] = s_glyph + y
+    foot = ring_s(cx, cy + rr)
+    outflow = {(x, y): foot + (y - cy - rr) for x in (cx - 1, cx, cx + 1)
+               for y in range(int(cy + rr), L.WALKWAYS[-1][2] + 2)}
+    return {"inflow": inflow, "ring": ring, "feeders": feeders, "glyph": glyph, "outflow": outflow}
 
 
 def glyph_cells(cx, cy):
@@ -706,7 +861,7 @@ def light_sources():
     for x, y0, y1, w in L.FALLS:
         src += [(x, y, 13, 0.3) for y in range(y0, y1, 9)]
     src += [(x, y - 6, 26, 0.9) for x, y in L.BRAZIERS]
-    src += [(L.FORGE["x"] + 15, L.FORGE["y"] + 28, 30, 1.0), (L.SIGIL["cx"], L.SIGIL["cy"], 30, 0.2)]
+    src += [(L.FORGE["x"] + 15, L.FORGE["y"] + 28, 30, 1.0), (L.SIGIL["cx"], L.SIGIL["cy"], 34, 0.5)]
     src += [(cx, b - ry, 36, 0.3) for cx, b, rx, ry in L.HOARD]
     return src
 
@@ -895,10 +1050,8 @@ def build_cavern() -> Cv:
 def build_lava(n: int = 4) -> list[Cv]:
     """The moving light: canals, falls, braziers, the forge mouth and the sigil's grooves, with dithered glow."""
     frames = []
-    sx, sy, sr = L.SIGIL["cx"], L.SIGIL["cy"], L.SIGIL["r"]
-    cells = glyph_cells(sx, sy)
-    feed = [(468 - k, 1028 + k // 2) for k in range(0, 26)]           # the fall's lava runs into the top of the B
-    overflow = [(sx, y) for y in range(sy + sr, 1161)]                # and out of the seal into the floor canal
+    flow = sigil_flow()
+    sx, sy, rr = L.SIGIL["cx"], L.SIGIL["cy"], L.SIGIL["r"] - 4.5
     bay = np.tile(BAYER, (H // 4 + 1, W // 4 + 1))[:H, :W]
     for f in range(n):
         cv = Cv(W, H)
@@ -941,15 +1094,23 @@ def build_lava(n: int = 4) -> list[Cv]:
             v = (y * 3 + x + f * 5) % 7
             cv.a[y, x] = LAVA[6] if v < 2 else LAVA[5] if v < 4 else LAVA[4]
         hot[mouth] = 1
-        pulse = [LAVA[2], LAVA[3], LAVA[3], LAVA[2]][f]               # the sigil: dim and slow, easy to miss
-        for (x, y) in cells:
-            cv.px(x, y, LAVA[4] if (x + y + f) % 13 == 0 else pulse)
-            if 0 <= y < H and 0 <= x < W:
-                hot[y, x] = 0.18
-        for (x, y) in feed + overflow:
-            cv.px(x, y, LAVA[4] if (x + y + f) % 5 else LAVA[5])
-            if 0 <= y < H and 0 <= x < W:
-                hot[y, x] = 0.4
+        # the sigil: bright bands travel with the flow (2px a frame on an 8px beat, so the loop is seamless)
+        hot_bands = [LAVA[6], LAVA[6], LAVA[5], LAVA[4], LAVA[4], LAVA[4], LAVA[4], LAVA[5]]
+        edge_bands = [LAVA[5], LAVA[5], LAVA[4], LAVA[3], LAVA[3], LAVA[3], LAVA[3], LAVA[4]]
+        glyph_bands = [LAVA[6], LAVA[5], LAVA[4], LAVA[3], LAVA[3], LAVA[3], LAVA[3], LAVA[4]]
+        for part, heat in (("inflow", 1.0), ("ring", 1.0), ("feeders", 0.7), ("outflow", 1.0), ("glyph", 0.5)):
+            for (x, y), dist in flow[part].items():
+                phase = int(dist - f * 2) % 8
+                if part == "glyph":
+                    c = glyph_bands[phase]
+                elif (part == "ring" and abs(math.hypot(x - sx, y - sy) - rr) > 0.8) or (part == "outflow"
+                                                                                    and x != sx):
+                    c = edge_bands[phase]                             # channel edges run a shade cooler
+                else:
+                    c = hot_bands[phase]
+                cv.px(x, y, c)
+                if 0 <= y < H and 0 <= x < W:
+                    hot[y, x] = heat
         glow = np.clip(box_blur(hot, 4) * 2.4 + box_blur(hot, 10) * 1.2, 0, 1) * (1 + 0.07 * math.sin(f * 1.6))
         level = np.floor(glow * 3 + bay) / 3                          # three dithered glow bands
         g = (level > 0) & (cv.a[:, :, 3] == 0)
