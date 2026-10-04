@@ -108,6 +108,37 @@ def test_pt_history_lists_the_official_target_first(monkeypatch, snap, pub):
     assert list(hist.columns)[0].endswith("(official)") and hist.iloc[0, 0].startswith(f"${pub.price_target:,.2f}")
 
 
+def test_owner_lockout_and_auto_lock(monkeypatch, snap, pub):
+    import time
+
+    from panel import common
+    monkeypatch.setenv("OWNER_PASSWORD", OWNER_TEST_PASSWORD)
+    guard = common._unlock_guard()
+    guard["locked_until"] = time.time() + 600          # as if someone had been guessing
+    try:
+        at = _app(monkeypatch, snap, pub).run()
+        at.text_input(key="owner_pw").input(OWNER_TEST_PASSWORD)
+        _button(at, "Unlock").click().run()
+        assert any("Too many wrong passwords" in e.value for e in at.error)   # even the right password waits
+        assert not [b for b in at.button if b.label == "Lock"]
+    finally:
+        guard["locked_until"], guard["fails"] = 0.0, []
+
+    at = _app(monkeypatch, snap, pub).run()
+    at.text_input(key="owner_pw").input(OWNER_TEST_PASSWORD)
+    _button(at, "Unlock").click().run()
+    assert [b for b in at.button if b.label == "Lock"]
+    at.session_state[common.OWNER_KEY] = time.time() - common.OWNER_IDLE - 1   # left unlocked too long
+    at.run()
+    assert not [b for b in at.button if b.label == "Lock"] and [w for w in at.text_input if w.key == "owner_pw"]
+
+
+def test_list_inputs_are_capped_and_bounded():
+    from panel import common
+    vals = common._floats(", ".join(str(x) for x in range(5, 500, 5)), [0.4], 0.01, lo=-0.5, hi=2.0, most=6)
+    assert len(vals) == 6 and all(-0.5 <= v <= 2.0 for v in vals)
+
+
 def test_publishing_without_a_password_secret_is_off(monkeypatch, snap, pub):
     monkeypatch.delenv("OWNER_PASSWORD", raising=False)
     at = _app(monkeypatch, snap, pub).run()

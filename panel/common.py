@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import hmac
+import math
 import os
 import time
 from dataclasses import replace
+from datetime import date
 
 import httpx
 import streamlit as st
@@ -122,13 +124,23 @@ def colors() -> dict:
 
 # ------------------------------------------------------------------ the lever sidebar
 
-def _floats(text: str, fallback: list[float], scale: float = 1.0) -> list[float]:
+def _floats(text: str, fallback: list[float], scale: float = 1.0, lo: float = -1e9, hi: float = 1e9,
+            most: int = 8) -> list[float]:
+    """Comma-separated numbers, kept within [lo, hi] and to at most `most` of them (each one is a model run per row
+    of the table, on a server every viewer shares)."""
     try:
-        vals = sorted({float(x) * scale for x in text.replace("%", "").replace("x", "").split(",") if x.strip()})
-        return vals or fallback
+        vals = sorted({min(max(float(x) * scale, lo), hi) for x in text.replace("%", "").replace("x", "").split(",")
+                       if x.strip()})
     except ValueError:
         st.sidebar.error(f"Couldn't read “{text}”; using the defaults.")
         return fallback
+    if len(vals) > most:
+        st.sidebar.caption(f"Using the first {most} values.")
+    return vals[:most] or fallback
+
+
+def _date_in(lo: date, hi: date, d: date) -> date:
+    return min(max(d, lo), hi)
 
 
 def _reset_levers() -> None:
@@ -149,20 +161,21 @@ def sidebar(st_: state.State, pub: published.Published | None, mode: str) -> lev
         top = st.container()
 
         with st.expander("1 · BTC price", expanded=True):
-            ye = st.number_input(f"BTC on {d.ye_anchor:%b %d, %Y} ($)", min_value=1000.0, value=d.ye_btc_price,
+            ye = st.number_input(f"BTC on {d.ye_anchor:%b %d, %Y} ($)", min_value=1000.0, max_value=10_000_000.0,
+                                 value=d.ye_btc_price,
                                  step=5000.0, format="%.0f", key=v + "ye")
             bands = _floats(st.text_input("CAGR bands after that (%)", ", ".join(f"{g * 100:g}" for g in d.cagr_bands),
                                           key=v + "bands",
                                           help="Comma-separated. The base case below drives the price target, the "
                                                "chart and the breakdown; every band gets a column in the price-target "
                                                "table (Full model detail)."),
-                            d.cagr_bands, 0.01)
+                            d.cagr_bands, 0.01, lo=-0.5, hi=2.0, most=6)
             base_ix = bands.index(d.base_cagr) if d.base_cagr in bands else len(bands) // 2
             base = st.selectbox("Base case", bands, index=base_ix, format_func=lambda g: f"{g * 100:g}% CAGR",
                                 key=v + "base")
 
         with st.expander("2 · SATA at $100 par", expanded=True):
-            weekly = st.number_input(f"$M per week through {d.sata_switch:%b %d, %Y}", min_value=0.0,
+            weekly = st.number_input(f"$M per week through {d.sata_switch:%b %d, %Y}", min_value=0.0, max_value=5000.0,
                                      value=d.sata_weekly_usd / 1e6, step=5.0, format="%.1f", key=v + "weekly",
                                      help="Recent run-rate: $72.7M/week (6 weeks to 9/25/26).")
             growth = st.number_input(f"Demand growth after {d.sata_switch:%b %d, %Y} (% a year)", min_value=-50.0,
@@ -179,11 +192,12 @@ def sidebar(st_: state.State, pub: published.Published | None, mode: str) -> lev
             rate_target = st.number_input("Rate to glide to (%)", min_value=0.0, max_value=30.0,
                                           value=(d.sata_rate_target or 0.12) * 100, step=0.25, format="%.2f",
                                           disabled=not glide_rate, key=v + "rate_target")
-            rate_by = st.date_input("Rate reaches it by", value=d.sata_rate_glide_to, disabled=not glide_rate,
+            rate_by = st.date_input("Rate reaches it by", value=_date_in(st_.price_date, d.horizon_end, d.sata_rate_glide_to),
+                                    min_value=st_.price_date, max_value=d.horizon_end, disabled=not glide_rate,
                                     key=v + "rate_by")
 
         with st.expander("3 · Common issuance", expanded=True):
-            common = st.number_input("New shares per week (% of FD shares)", min_value=0.0,
+            common = st.number_input("New shares per week (% of FD shares)", min_value=0.0, max_value=10.0,
                                      value=d.common_weekly_pct * 100, step=0.05, format="%.2f", key=v + "common",
                                      help="6-week average 1.86% (front-loaded); last 3 weeks 0.50%.")
 
@@ -197,17 +211,21 @@ def sidebar(st_: state.State, pub: published.Published | None, mode: str) -> lev
                                      "it glides to, by the date, then holds. Off: one k throughout.")
             # the starting k is the k the price implied when the target was set; on fresh data, today's
             k0 = d.k_start if (mode == "published" and d.k_start is not None) else k_now
-            k_start = st.number_input("Starting k", min_value=0.0, value=round(k0, 2), step=0.05, format="%.2f",
+            k_start = st.number_input("Starting k", min_value=0.0, max_value=20.0, value=min(round(k0, 2), 20.0),
+                                      step=0.05, format="%.2f",
                                       disabled=not k_glide, key=v + f"k_start.{mode}",
                                       help=f"Where the glide starts, on {st_.price_date:%b %d, %Y}. It opens at the k "
                                            f"the price implied when the target was set; that data's price implies "
                                            f"{k_now:.2f}x on Strive's trailing 12 months.")
-            k = st.number_input("k it glides to" if k_glide else "k", min_value=0.0, value=d.growth_multiple,
+            k = st.number_input("k it glides to" if k_glide else "k", min_value=0.0, max_value=20.0,
+                                value=d.growth_multiple,
                                 step=0.25, format="%.2f", key=v + "k",
                                 help="Price target = (NTAV + k × the year's BTC $ Gain) ÷ diluted shares.")
-            k_by = st.date_input("k reaches it by", value=d.k_glide_to, disabled=not k_glide, key=v + "k_by")
+            k_by = st.date_input("k reaches it by", value=_date_in(st_.price_date, d.horizon_end, d.k_glide_to),
+                                 min_value=st_.price_date, max_value=d.horizon_end, disabled=not k_glide, key=v + "k_by")
             rows = _floats(st.text_input("Price-target table rows (k at the end of the glide)",
-                                         ", ".join(f"{x:g}" for x in d.k_table), key=v + "rows"), d.k_table)
+                                         ", ".join(f"{x:g}" for x in d.k_table), key=v + "rows"), d.k_table,
+                          lo=0.0, hi=20.0, most=8)
 
         with st.expander("5 · Market mNAV", expanded=True):
             st.caption("The price new common sells at during the forecast (ASST ÷ NTAV per diluted share).")
@@ -220,9 +238,11 @@ def sidebar(st_: state.State, pub: published.Published | None, mode: str) -> lev
             manual = mnav_mode == "manual"
             hold = st.toggle(f"Hold today's {m0:.2f}x", value=d.mnav_target is None, disabled=not manual,
                              key=v + "hold")
-            target = st.number_input("Glide to (x)", min_value=0.1, value=d.mnav_target or 2.0, step=0.05,
+            target = st.number_input("Glide to (x)", min_value=0.1, max_value=20.0, value=d.mnav_target or 2.0,
+                                     step=0.05,
                                      format="%.2f", disabled=not manual or hold, key=v + "mnav_target")
-            glide_to = st.date_input("Reach it by", value=d.mnav_glide_to, disabled=not manual or hold,
+            glide_to = st.date_input("Reach it by", value=_date_in(st_.price_date, d.horizon_end, d.mnav_glide_to),
+                                     min_value=st_.price_date, max_value=d.horizon_end, disabled=not manual or hold,
                                      key=v + "mnav_by")
 
         with st.expander("6 · Warrants and costs", expanded=True):
@@ -230,7 +250,7 @@ def sidebar(st_: state.State, pub: published.Published | None, mode: str) -> lev
                             int(round(d.warrant_exercise * 100)), key=v + "wex",
                             help=f"{st_.warrants / 1e6:.2f}M at ${d.warrant_strike:g}, only if ASST is above the strike "
                                  "that week. The date comes from a CEO post on X, not yet a filing.")
-            burn = st.number_input("Net cash burn ($M per week)", min_value=0.0,
+            burn = st.number_input("Net cash burn ($M per week)", min_value=0.0, max_value=100.0,
                                    value=d.net_cash_burn_weekly_usd / 1e6, step=0.1, format="%.1f", key=v + "burn")
 
         st.divider()
@@ -262,25 +282,49 @@ def sidebar(st_: state.State, pub: published.Published | None, mode: str) -> lev
 
 # ------------------------------------------------------------------ the owner panel
 
+MAX_FAILS, FAIL_WINDOW, LOCKOUT, OWNER_IDLE = 10, 15 * 60, 15 * 60, 30 * 60  # seconds
+
+
+@st.cache_resource
+def _unlock_guard() -> dict:
+    """Wrong owner passwords across every session on this server (a restart clears it): guessing at scale locks
+    the panel for a while, whichever browser the guesses come from."""
+    return {"fails": [], "locked_until": 0.0}
+
+
+def _owner_unlocked() -> bool:
+    """Unlocked in this session, and not idle past OWNER_IDLE (it re-locks itself)."""
+    t = st.session_state.get(OWNER_KEY)
+    return isinstance(t, float) and time.time() - t < OWNER_IDLE
+
+
 def _unlock() -> None:
     secret = os.environ.get("OWNER_PASSWORD", "")
     typed = st.session_state.get(OWNER_PW, "")
     st.session_state[OWNER_PW] = ""
+    g, now = _unlock_guard(), time.time()
+    if now < g["locked_until"]:
+        st.session_state[OWNER_MSG] = ("error", f"Too many wrong passwords. Try again in "
+                                                f"{math.ceil((g['locked_until'] - now) / 60)} min.")
+        return
     if secret and hmac.compare_digest(typed.encode("utf-8"), secret.encode("utf-8")):
-        st.session_state[OWNER_KEY] = True
+        st.session_state[OWNER_KEY] = now
         st.session_state.pop(OWNER_MSG, None)
-    else:
-        time.sleep(1.5)  # slow down guessing
-        st.session_state[OWNER_MSG] = ("error", "Wrong password.")
+        return
+    g["fails"] = [t for t in g["fails"] if now - t < FAIL_WINDOW] + [now]
+    if len(g["fails"]) >= MAX_FAILS:
+        g["locked_until"], g["fails"] = now + LOCKOUT, []
+    time.sleep(1.5)  # slow down guessing
+    st.session_state[OWNER_MSG] = ("error", "Wrong password.")
 
 
 def _lock() -> None:
-    st.session_state[OWNER_KEY] = False
+    st.session_state[OWNER_KEY] = None
     st.session_state.pop(OWNER_MSG, None)
 
 
 def _publish(lv: levers.Levers, st_: state.State, value: dict, btc_at_target: float) -> None:
-    if not st.session_state.get(OWNER_KEY):
+    if not _owner_unlocked():
         return
     prev = current_published()
     p = published.make(lv, st_, value["price_target"], OWNER_HANDLE)
@@ -307,13 +351,12 @@ def _publish(lv: levers.Levers, st_: state.State, value: dict, btc_at_target: fl
 def owner_panel(st_: state.State, lv: levers.Levers, value: dict, btc_at_target: float,
                 pub: published.Published | None, mode: str) -> None:
     """Password-locked: set this session's levers and data as the live price target for every viewer."""
-    with st.sidebar, st.expander("Owner", expanded=bool(st.session_state.get(OWNER_MSG)
-                                                        or st.session_state.get(OWNER_KEY))):
+    with st.sidebar, st.expander("Owner", expanded=bool(st.session_state.get(OWNER_MSG) or _owner_unlocked())):
         kind, text = st.session_state.get(OWNER_MSG, (None, None))
         if not os.environ.get("OWNER_PASSWORD"):
             st.caption("Publishing is off: set an OWNER_PASSWORD secret to turn it on.")
             return
-        if not st.session_state.get(OWNER_KEY):
+        if not _owner_unlocked():
             st.text_input("Password", type="password", key=OWNER_PW)
             st.button("Unlock", on_click=_unlock, width="stretch")
             if kind == "error":
