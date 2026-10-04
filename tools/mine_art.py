@@ -533,6 +533,32 @@ def fire() -> list[Cv]:
     return out
 
 
+def favicon() -> Cv:
+    """The browser-tab icon, 32 x 32: the dragon's head in profile, horns swept back, mouth set with teeth."""
+    cv = Cv(32, 32)
+    red, hi, dk, dd = C("#a3241a"), C("#d2492c"), C("#6a1515"), C("#3e0b0e")
+    cv.fill(cv.mask_poly([(19, 20), (27, 17), (31, 24), (31, 31), (21, 31)]), dk)                    # neck
+    cv.fill(cv.mask_poly([(2, 15), (8, 12), (16, 10), (22, 8), (26, 11), (27, 17), (24, 21), (16, 22), (8, 21),
+                          (2, 19)]), red)
+    cv.fill(cv.mask_poly([(4, 13), (16, 10), (22, 8), (24, 10), (14, 12), (5, 15)]), hi)              # lit brow
+    cv.fill(cv.mask_poly([(2, 18), (16, 19), (24, 18), (24, 21), (16, 22), (8, 21), (2, 19)]), dk)    # jaw shadow
+    cv.line(4, 18, 15, 18, dd)                                                                        # mouth
+    for x in (6, 9, 12):
+        cv.px(x, 19, C("#f2ead8"))                                                                    # teeth
+    for p0, p1, p2 in [((19, 9), (24, 3), (30, 1)), ((22, 10), (27, 6), (31, 5))]:                    # horns
+        for x, y in _bezier(p0, p1, p2, 14):
+            cv.px(round(x), round(y), C("#e8dbbb"))
+            cv.px(round(x), round(y) + 1, C("#a8946a"))
+    for x, y in [(25, 22), (28, 26), (30, 29)]:                                                       # neck ridges
+        cv.fill(cv.mask_poly([(x, y), (x + 2, y - 3), (x + 3, y)]), dd)
+    cv.px(17, 13, C("#ffe14a"))                                                                       # eye
+    cv.px(18, 13, C("#ffe14a"))
+    cv.px(17, 14, OUTLINE)
+    cv.px(3, 15, OUTLINE)                                                                             # nostril
+    cv.outline()
+    return cv
+
+
 def build_sprites() -> dict[str, Image.Image]:
     s = {}
     s["miner_a"] = sheet(dwarf_miner(0, 0))
@@ -548,6 +574,7 @@ def build_sprites() -> dict[str, Image.Image]:
     s["dragon_breath"] = sheet([dragon_frame(w, True) for w in (0, 2)])  # head held level: fire stays in the mouth
     s["fire"] = sheet(fire())
     s["zap"] = sheet(zap())
+    s["favicon"] = favicon().image()
     return s
 
 

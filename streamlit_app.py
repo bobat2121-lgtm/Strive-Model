@@ -5,10 +5,9 @@ from pathlib import Path
 
 import streamlit as st
 
-st.set_page_config(page_title="Strive Model", page_icon=":material/insights:", layout="wide",
-                   initial_sidebar_state="collapsed")  # the scene needs the room; levers are one click away
-
 ROOT = Path(__file__).parent
+st.set_page_config(page_title="Strive Model", page_icon=str(ROOT / "static" / "mine" / "favicon.png"), layout="wide",
+                   initial_sidebar_state="collapsed")  # the scene needs the room; levers are one click away
 APP_PACKAGES = ("panel", "model")
 
 
@@ -25,8 +24,9 @@ def load_fresh_code() -> None:
     (a TypeError on a changed signature). So each run compares the app's files with what this process last loaded;
     when they differ it drops the app's modules, the compiled page scripts and the data caches, and this run imports
     everything fresh."""
-    now = {str(p): p.stat().st_mtime for d in (*APP_PACKAGES, "config") for p in (ROOT / d).rglob("*")
-           if p.suffix in (".py", ".yaml")}
+    files = [Path(__file__), *(p for d in (*APP_PACKAGES, "config") for p in (ROOT / d).rglob("*")
+                               if p.suffix in (".py", ".yaml"))]
+    now = {str(p): p.stat().st_mtime for p in files}
     seen = _loaded_code()
     if seen == now:
         return
