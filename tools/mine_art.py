@@ -624,9 +624,9 @@ def masonry(cv, x0, y0, x1, y1, rng, tones, bw=20, bh=9):
 
 def rune_band(cv, x0, x1, y, tones):
     """A carved band of angular dwarven knotwork with gold inlay."""
-    prect(cv, None, x0, y, x1 - x0, 7, tones[1])
+    prect(cv, None, x0, y, x1 - x0, L.RUNE_H, tones[1])
     prect(cv, None, x0, y, x1 - x0, 1, tones[4])
-    prect(cv, None, x0, y + 6, x1 - x0, 1, tones[0])
+    prect(cv, None, x0, y + L.RUNE_H - 1, x1 - x0, 1, tones[0])
     for x in range(x0, x1, 8):
         for d in range(4):
             cv.px(x + d, y + 1 + d, tones[4])
@@ -1026,8 +1026,8 @@ def build_cavern() -> Cv:
     cv = Cv(W, H, STONE[0])
     deep_space(cv, rng)                                               # the open cavern behind everything
     masonry(cv, 0, 28, W, 192, rng, STONE, bw=22, bh=10)              # the hall's built wall
-    rune_band(cv, 0, W, 44, STONE)
-    rune_band(cv, 0, W, 176, STONE)
+    for y in L.RUNE_BANDS:
+        rune_band(cv, 0, W, y, STONE)
     prect(cv, None, 0, 0, W, 30, STONE[1])                            # ceiling and stalactites
     slabs(cv, 0, 0, W, 30, rng, STONE[:5], h_rng=(4, 7))
     for x in range(0, W, 7):

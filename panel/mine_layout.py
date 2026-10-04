@@ -7,6 +7,7 @@ throne beside the hero, and the gaps between sections.
 """
 SCENE_W, SCENE_H = 480, 1200
 
+RUNE_BANDS, RUNE_H = (44, 176), 7   # the carved bands across the throne hall wall; the price target sits between them
 # walkways: (x0, x1, y_top); every walkway carries a lava canal in a groove along its top
 WALKWAYS = [
     (0, 480, 192),                      # the throne hall floor

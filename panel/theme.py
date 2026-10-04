@@ -48,6 +48,8 @@ def _in_dragon(x, y, w, h) -> str:
             f"width: {w / d['w'] * 100:.4f}%; height: {h / d['h'] * 100:.4f}%;")
 
 
+ZONE_TOP = (L.RUNE_BANDS[0] + L.RUNE_H) / L.SCENE_W * 100       # vw: just under the upper band...
+ZONE_H = (L.RUNE_BANDS[1] - L.RUNE_BANDS[0] - L.RUNE_H) / L.SCENE_W * 100   # ...to the top of the lower one
 FIRE_BOX = _in_dragon(L.MOUTH[0] - L.FIRE["w"] + 1, L.MOUTH[1] - L.FIRE["h"] / 2, L.FIRE["w"], L.FIRE["h"])
 ZAP_BOX = _in_dragon(L.ZAP["x"], L.ZAP["y"], L.ZAP["w"], L.ZAP["h"])
 
@@ -164,8 +166,12 @@ PAGE_CSS = f"""
 @keyframes mx-ember {{ 50% {{ box-shadow: 0 0 0 1px #2a0e06, 0 0 20px rgba(255, 120, 30, .40),
   inset 0 0 0 1px rgba(255, 176, 96, .14); }} }}
 
-.vg-hero {{ position: relative; width: fit-content; max-width: 58%; padding: 30px 40px 28px 32px;
-  margin-bottom: 64px; }}
+.vg-hero {{ position: relative; width: fit-content; max-width: 58%; padding: 30px 40px 28px 32px; }}
+/* on first load the price target sits centered in the open wall between the two rune bands; the scene is 100vw wide,
+   so the zone is sized in vw to track it, and it scrolls away with the page like any other panel */
+[data-testid="stMainBlockContainer"]:has(.vg-hero-zone) {{ padding-top: 0; }}
+.vg-hero-zone {{ display: flex; align-items: center; margin-top: max({ZONE_TOP:.4f}vw, 4.5rem);
+  min-height: {ZONE_H:.4f}vw; }}
 .vg-eyebrow {{ font-family: 'Silkscreen', monospace; font-size: 12px; letter-spacing: .14em; color: var(--mx-lava);
   text-transform: uppercase; }}
 .vg-hero-value {{ font-family: 'Ringbearer', serif; font-size: 88px; line-height: 1.05; color: var(--mx-gold);
@@ -238,8 +244,8 @@ def _e(s: str) -> str:
 
 
 def hero(eyebrow: str, value: str, delta_html: str) -> None:
-    st.html(f'<div class="vg-hero"><div class="vg-eyebrow">{_e(eyebrow)}</div>'
-            f'<div class="vg-hero-value">{_e(value)}</div><div class="vg-hero-delta">{delta_html}</div></div>')
+    st.html(f'<div class="vg-hero-zone"><div class="vg-hero"><div class="vg-eyebrow">{_e(eyebrow)}</div>'
+            f'<div class="vg-hero-value">{_e(value)}</div><div class="vg-hero-delta">{delta_html}</div></div></div>')
 
 
 def facts(items: list[tuple[str, str, str]]) -> None:
