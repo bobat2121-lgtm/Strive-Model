@@ -1,5 +1,6 @@
 [server]
 headless = true
+enableStaticServing = true   # static/: the Mine art and the Ringbearer font
 
 [browser]
 gatherUsageStats = false
@@ -7,9 +8,9 @@ gatherUsageStats = false
 [client]
 toolbarMode = "minimal"
 
-[theme]                       # dark base for every Vault theme; panel/theme.py styles the rest
+[theme]                       # dark base; panel/theme.py styles the rest
 base = "dark"
-primaryColor = "#2ea596"
-backgroundColor = "#0b0e10"
-secondaryBackgroundColor = "#141a1e"
-textColor = "#e8e4da"
+primaryColor = "#d9701e"
+backgroundColor = "#07080d"
+secondaryBackgroundColor = "#1a130f"
+textColor = "#f3e6cf"

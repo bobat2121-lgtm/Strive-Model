@@ -5,7 +5,9 @@ over a websocket, so a plain --screenshot fires before anything renders).
 writes renderings/vault-1.png, -2.png, ... at a 1440x900 viewport, scrolled to each offset given (px).
 
     .venv\\Scripts\\python tools\\screenshot.py http://localhost:8521/ renderings/vault.gif 12
-records 12 seconds at the top of the page as an animated GIF (to show motion).
+records 12 seconds at the top of the page as an animated GIF (to show motion). Append x y w h to record just that
+region at full size; the Mine's rare moves (fire breath every 23s, the spin every 41s) are cued into the first seconds
+of the recording so a short GIF shows them.
 """
 from __future__ import annotations
 
@@ -25,10 +27,14 @@ EDGE = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
 PORT = 9333
 SCROLLER = ("[...document.querySelectorAll('*')].find(e => e.scrollHeight > e.clientHeight + 40 && "
             "['auto','scroll'].includes(getComputedStyle(e).overflowY) && e.clientWidth > 600)")
+# fast-forward the dragon so the breath lands ~2s into a recording and the spin ~6s in
+CUE = ("document.getAnimations().forEach(a => { const n = a.animationName; "
+       "if (n === 'mx-breath-show' || n === 'mx-idle-show') a.currentTime = 23000 * 0.83 - 2000; "
+       "if (n === 'mx-spin') a.currentTime = 41000 * 0.66 - 6000; })")
 
 
 async def shoot(url: str, prefix: str, offsets: list[int], width: int = 1440, height: int = 900, wait: int = 16,
-                record: float = 0.0, fps: int = 6, scale: float = 0.6):
+                record: float = 0.0, fps: int = 6, scale: float = 0.6, clip: list[int] | None = None):
     proc = subprocess.Popen([EDGE, "--headless=new", f"--remote-debugging-port={PORT}", "--hide-scrollbars",
                              f"--user-data-dir={tempfile.mkdtemp()}", "about:blank"],
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -58,12 +64,16 @@ async def shoot(url: str, prefix: str, offsets: list[int], width: int = 1440, he
         if record:
             from io import BytesIO
             from PIL import Image
+            await call("Runtime.evaluate", {"expression": CUE})
+            shot = {"format": "png"}
+            if clip:
+                shot["clip"] = dict(zip(("x", "y", "width", "height"), clip), scale=1)
             frames, t_end = [], time.time() + record
             while time.time() < t_end:
                 t0 = time.time()
-                img = await call("Page.captureScreenshot", {"format": "jpeg", "quality": 85})
+                img = await call("Page.captureScreenshot", shot)
                 im = Image.open(BytesIO(base64.b64decode(img["data"]))).convert("RGB")
-                frames.append(im.resize((int(width * scale), int(height * scale)), Image.LANCZOS))
+                frames.append(im if clip else im.resize((int(width * scale), int(height * scale)), Image.LANCZOS))
                 await asyncio.sleep(max(0.0, 1 / fps - (time.time() - t0)))
             frames[0].save(prefix, save_all=True, append_images=frames[1:], duration=int(1000 / fps), loop=0,
                            optimize=True)
@@ -86,6 +96,7 @@ async def shoot(url: str, prefix: str, offsets: list[int], width: int = 1440, he
 if __name__ == "__main__":
     url, out, rest = sys.argv[1], sys.argv[2], sys.argv[3:]
     if out.endswith(".gif"):
-        asyncio.run(shoot(url, out, [], record=float(rest[0]) if rest else 10.0))
+        asyncio.run(shoot(url, out, [], record=float(rest[0]) if rest else 10.0,
+                          clip=[int(x) for x in rest[1:5]] or None, fps=10 if rest[1:5] else 6))
     else:
         asyncio.run(shoot(url, out, [int(x) for x in rest] or [0]))

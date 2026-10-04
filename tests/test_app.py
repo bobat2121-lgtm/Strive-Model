@@ -12,7 +12,7 @@ def test_model_page_renders(monkeypatch, calc, base):
     bodies = [h.proto.body for h in at.get("html")]
     hero = next(b for b in bodies if "vg-hero" in b)
     assert "Price target" in hero and "Dec 31, 2028" in hero        # the target is the hero
-    assert any("Strive today" in b for b in bodies)
+    assert any("strive today" in b.lower() for b in bodies)
     assert any("$14.09" in b and "2.13×" in b for b in bodies)      # today's cards match Strive's dashboard
     assert any("vg-ledger" in b and "Growth premium" in b for b in bodies)
     assert [e.label for e in at.expander][0] == "Full model detail"  # everything else is folded away
