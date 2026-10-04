@@ -51,17 +51,21 @@ theme.section(f"The path to {T:%b %Y}",
               f"is ASST on {stt.price_date:%b %d, %Y} (${p0:,.2f}).")
 with st.container(key="vg_chart"):
     st.altair_chart(charts.waterfall(row, f"{T:%b %Y}", c), width="stretch", theme=None)
-k_story = (f"Today's price implies {valuation.implied_k(stt):.2f}×; the model glides it to {lv.growth_multiple:.2f}× by "
-           f"{lv.k_glide_to:%b %Y}." if lv.k_glide else "Held flat at the sidebar setting.")
+k_implied = valuation.implied_k(stt)
+k0 = lv.k_start if lv.k_start is not None else k_implied
+k_from = (f"the k ASST's price implied on {stt.price_date:%b %d, %Y} (on Strive's actual last 12 months of bitcoin "
+          f"earnings)" if abs(k0 - k_implied) < 0.005 else "your starting k")
+k_story = (f"It starts at {k0:.2f}×, {k_from}, and glides to {lv.growth_multiple:.2f}× by {lv.k_glide_to:%b %Y}."
+           if lv.k_glide else f"Held at {lv.growth_multiple:.2f}× throughout.")
 with st.container(key="vg_facts"), st.expander("Key assumptions", expanded=False):
     theme.facts([
         ("Implied mNAV", f"{v['implied_mnav']:.2f}×",
          f"How richly the target values Strive against what it owns: the price target ÷ NTAV per share on "
          f"{T:%b %d, %Y}. At {v['implied_mnav']:.2f}×, a share is worth {v['implied_mnav']:.2f} times the bitcoin and "
-         f"cash behind it, after SATA. Today's mNAV is {m0:.2f}×."),
+         f"cash behind it, after SATA. ASST traded at {m0:.2f}× on {stt.price_date:%b %d, %Y}."),
         ("Growth multiple k", f"{v['k']:.2f}×",
-         f"How many years of bitcoin earnings investors pay for on top of NTAV, like a P/E on bitcoin earnings. "
-         f"{k_story}"),
+         f"How many years of {T.year} bitcoin earnings (BTC $ Gain) investors pay for on top of NTAV, like a P/E on "
+         f"bitcoin earnings. {k_story}"),
         ("BTC at target", f"${r.btc_price:,.0f}",
          f"Bitcoin's assumed price on {T:%b %d, %Y}: ${lv.ye_btc_price:,.0f} at {lv.ye_anchor:%b %Y}, then growing "
          f"{lv.base_cagr:.0%} a year. Both are levers in the sidebar."),

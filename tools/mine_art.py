@@ -911,13 +911,18 @@ def light_sources():
     return src
 
 
+LIGHT_REACH = 8  # a light fades out smoothly by this many radii (a hard square cutoff left visible seams)
+
+
 def apply_light(cv: Cv, sources):
     yy, xx = np.mgrid[0:cv.h, 0:cv.w]
     lum = np.zeros((cv.h, cv.w))
     for x, y, r, k in sources:
-        x0, x1 = max(0, int(x - r * 4)), min(cv.w, int(x + r * 4))
-        y0, y1 = max(0, int(y - r * 4)), min(cv.h, int(y + r * 4))
-        lum[y0:y1, x0:x1] += k / (1 + ((xx[y0:y1, x0:x1] - x) ** 2 + (yy[y0:y1, x0:x1] - y) ** 2) / r ** 2)
+        reach = r * LIGHT_REACH
+        x0, x1 = max(0, int(x - reach)), min(cv.w, int(x + reach) + 1)
+        y0, y1 = max(0, int(y - reach)), min(cv.h, int(y + reach) + 1)
+        d2 = (xx[y0:y1, x0:x1] - x) ** 2 + (yy[y0:y1, x0:x1] - y) ** 2
+        lum[y0:y1, x0:x1] += k / (1 + d2 / r ** 2) * np.clip(1 - d2 / reach ** 2, 0, 1) ** 2
     bay = np.tile(BAYER, (cv.h // 4 + 1, cv.w // 4 + 1))[:cv.h, :cv.w]
     level = np.clip(np.floor(np.clip(lum, 0, 1.1) * 4 + bay) / 4, 0, 1.25)  # posterized, ordered dither
     rgb = cv.a[:, :, :3].astype(float)

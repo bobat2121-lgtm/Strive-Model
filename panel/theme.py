@@ -176,7 +176,8 @@ PAGE_CSS = f"""
 @keyframes mx-ember {{ 50% {{ box-shadow: 0 0 0 1px #2a0e06, 0 0 20px rgba(255, 120, 30, .40),
   inset 0 0 0 1px rgba(255, 176, 96, .14); }} }}
 
-.vg-hero {{ position: relative; width: fit-content; max-width: 58%; padding: 30px 40px 28px 32px; }}
+.vg-hero {{ position: relative; width: fit-content; max-width: 62%; padding: 38px 58px 34px 42px; }}
+.vg-hero .vg-eyebrow {{ font-size: 14px; }}
 /* on first load the price target sits centered in the open wall between the two rune bands; the scene is 100vw wide,
    so the zone is sized in vw to track it, and it scrolls away with the page like any other panel */
 [data-testid="stMainBlockContainer"]:has(.vg-hero-zone) {{ padding-top: 0; }}
@@ -184,11 +185,11 @@ PAGE_CSS = f"""
   min-height: {ZONE_H:.4f}vw; }}
 .vg-eyebrow {{ font-family: 'Silkscreen', monospace; font-size: 12px; letter-spacing: .14em; color: var(--mx-lava);
   text-transform: uppercase; }}
-.vg-hero-value {{ font-family: 'Ringbearer', serif; font-size: 88px; line-height: 1.05; color: var(--mx-gold);
+.vg-hero-value {{ font-family: 'Ringbearer', serif; font-size: 112px; line-height: 1.05; color: var(--mx-gold);
   margin: 10px 0 4px; text-shadow: 0 3px 0 #4a2a08, 0 0 24px rgba(255, 170, 40, .35); }}
-.vg-hero-delta {{ font-size: 16px; color: var(--mx-ink2); }}
+.vg-hero-delta {{ font-size: 20px; color: var(--mx-ink2); }}
 .vg-hero-delta b {{ color: var(--mx-gold); }}
-.vg-hero-note {{ margin-top: 8px; font-size: 12.5px; color: var(--mx-muted); }}
+.vg-hero-note {{ margin-top: 10px; font-size: 14px; color: var(--mx-muted); }}
 .st-key-vg_facts details, .st-key-vg_facts [data-testid="stExpanderDetails"] {{ overflow: visible; }}
 .vg-facts {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; padding: 2px 0 8px; }}
 .vg-fact {{ position: relative; padding: 11px 14px 10px; border: 1px solid #6a3a1a; background: #0f0b09; cursor: help;
