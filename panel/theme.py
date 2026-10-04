@@ -21,11 +21,12 @@ import streamlit as st
 
 from panel import mine_layout as L
 
-ART = "/app/static/mine"
+# relative URLs: Streamlit Community Cloud serves the app under a path prefix (/~/+/), which a leading slash would skip
+ART = "app/static/mine"
 # a version stamp on every image URL, so browsers fetch new art when it changes (static files have no cache policy)
 V = hashlib.md5(b"".join(f.read_bytes() for f in sorted(
     (Path(__file__).parents[1] / "static" / "mine").glob("*.png")))).hexdigest()[:8]
-FONT = "/app/static/fonts/ringbearer/RingbearerMedium-51mgZ.ttf"
+FONT = "app/static/fonts/ringbearer/RingbearerMedium-51mgZ.ttf"
 PAL = {"bg": "#07080d", "surface": "#15100d", "ink": "#f3e6cf", "ink2": "#cdb994", "muted": "#9a8a72",
        "gold": "#f2c14e", "lava": "#ff6a13", "grid": "#2a211b",
        "up": "#bb8118", "down": "#4f80b8", "total": "#7d838d", "s1": "#bb8118", "s2": "#4f80b8"}
