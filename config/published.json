@@ -1,0 +1,74 @@
+{
+  "set_at": "2026-10-04T18:55:24+00:00",
+  "set_by": "@WallyXIX",
+  "price_target": 198.66640488369094,
+  "levers": {
+    "ye_btc_price": 100000.0,
+    "ye_anchor": "2026-12-31",
+    "cagr_bands": [
+      0.3,
+      0.4,
+      0.5
+    ],
+    "base_cagr": 0.4,
+    "sata_weekly_usd": 70000000.0,
+    "sata_switch": "2026-12-31",
+    "sata_growth": 0.5,
+    "sata_rate": null,
+    "sata_rate_target": null,
+    "sata_rate_glide_to": "2027-12-31",
+    "reserve_months": 18.0,
+    "common_weekly_pct": 0.005,
+    "pt_date": "2028-12-31",
+    "growth_multiple": 3.0,
+    "k_glide": true,
+    "k_start": 3.35,
+    "k_glide_to": "2028-12-31",
+    "k_table": [
+      1.0,
+      2.0,
+      3.0,
+      4.0,
+      5.0
+    ],
+    "market_mnav_mode": "model",
+    "mnav_target": null,
+    "mnav_glide_to": "2026-12-31",
+    "warrant_date": "2026-10-13",
+    "warrant_exercise": 1.0,
+    "warrant_strike": 27.0,
+    "net_cash_burn_weekly_usd": 1200000.0,
+    "horizon_end": "2031-12-31"
+  },
+  "state": {
+    "as_of": "2026-09-25",
+    "price_date": "2026-10-04",
+    "btc": 27461.787045569996,
+    "btc_price": 85343.55,
+    "share_price": 30.03,
+    "fd_shares": 100776795.0,
+    "sata_notional": 1219318000.0,
+    "sata_rate": 0.13,
+    "cash": 248800000.0,
+    "securities": 49763000.0,
+    "debt": 0.0,
+    "warrants": 25349806.0,
+    "strive_ev_mnav": 1.6841340893139733,
+    "sources": {
+      "balance sheet, SATA, prices": "strive.com (live)",
+      "warrants": "strive.com (live)"
+    },
+    "history": {
+      "fy_start": {
+        "date": "2025-12-31",
+        "btc": 7626.81383149,
+        "fd_shares": 44766899.0
+      },
+      "year_ago": {
+        "date": "2025-09-30",
+        "btc": 5885.59364,
+        "fd_shares": 42204977.0
+      }
+    }
+  }
+}

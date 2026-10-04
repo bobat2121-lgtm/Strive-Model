@@ -67,7 +67,7 @@ def waterfall(row: pd.Series, when: str, c: dict) -> alt.LayerChart:
     labels = base.mark_text(dy=-10, fontSize=15, fontWeight=600, font=c["font_num"], color=c["ink"]).encode(
         y="top:Q", text="text:N")
     ref = pd.DataFrame({"y": [float(row["today_price"])], "label": [LABELS["op_costs"]],
-                        "text": [f"Today ${row['today_price']:,.2f}"]})
+                        "text": [f"ASST ${row['today_price']:,.2f}"]})
     rule = alt.Chart(ref).mark_rule(color=c["muted"], strokeWidth=1, strokeDash=[2, 3]).encode(
         y="y:Q", tooltip=alt.Tooltip("text:N", title="Reference"))
     rule_label = alt.Chart(ref).mark_text(dy=-8, fontSize=11, color=c["ink2"]).encode(  # over the near-empty

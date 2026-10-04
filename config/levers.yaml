@@ -22,7 +22,8 @@ common:
 valuation:                    # BTC-earnings method: price target = (NTAV + k x the year's BTC $ Gain) / FD shares
   price_target_date: 2028-12-31
   growth_multiple: 3          # k at the end of the glide (3x)
-  glide_from_today: true      # start k at what today's price implies (~3.4x on Strive's trailing 12 months)
+  glide_from_today: true      # glide k from start to growth_multiple
+  start: null                 # null = what the price implies on the data date (~3.4x on Strive's trailing 12 months)
   glide_to: 2028-12-31        # ... and glide in a straight line to growth_multiple by this date, then hold
   table: [1, 2, 3, 4, 5]      # rows of the price-target table (k)
 

@@ -31,7 +31,8 @@ class Levers:
     # 4) Valuation, BTC-earnings method: price target = (NTAV + k x the year's BTC $ Gain) / FD shares
     pt_date: date = date(2028, 12, 31)
     growth_multiple: float = 3.0             # k at the end of the glide
-    k_glide: bool = True                     # start k at what today's price implies and glide to growth_multiple
+    k_glide: bool = True                     # glide k from k_start to growth_multiple by k_glide_to
+    k_start: float | None = None             # where the glide starts; None = what the data date's price implies
     k_glide_to: date = date(2028, 12, 31)
     k_table: list[float] = field(default_factory=lambda: [1.0, 2.0, 3.0, 4.0, 5.0])
     # Market mNAV (price / NTAV per share) during the forecast: the price new common sells at. "model" makes it equal
@@ -76,6 +77,7 @@ def load(path: Path | str = DEFAULT_PATH) -> Levers:
         pt_date=val.get("price_target_date", d.pt_date),
         growth_multiple=float(val.get("growth_multiple", d.growth_multiple)),
         k_glide=bool(val.get("glide_from_today", d.k_glide)),
+        k_start=float(val["start"]) if val.get("start") is not None else None,
         k_glide_to=val.get("glide_to", d.k_glide_to),
         market_mnav_mode=str(m.get("mode", d.market_mnav_mode)),
         k_table=[float(x) for x in val.get("table") or d.k_table],

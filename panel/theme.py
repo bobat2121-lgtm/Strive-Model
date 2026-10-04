@@ -188,6 +188,7 @@ PAGE_CSS = f"""
   margin: 10px 0 4px; text-shadow: 0 3px 0 #4a2a08, 0 0 24px rgba(255, 170, 40, .35); }}
 .vg-hero-delta {{ font-size: 16px; color: var(--mx-ink2); }}
 .vg-hero-delta b {{ color: var(--mx-gold); }}
+.vg-hero-note {{ margin-top: 8px; font-size: 12.5px; color: var(--mx-muted); }}
 .st-key-vg_facts details, .st-key-vg_facts [data-testid="stExpanderDetails"] {{ overflow: visible; }}
 .vg-facts {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; padding: 2px 0 8px; }}
 .vg-fact {{ position: relative; padding: 11px 14px 10px; border: 1px solid #6a3a1a; background: #0f0b09; cursor: help;
@@ -253,9 +254,11 @@ def _e(s: str) -> str:
     return html.escape(str(s), quote=False)
 
 
-def hero(eyebrow: str, value: str, delta_html: str) -> None:
+def hero(eyebrow: str, value: str, delta_html: str, note: str | None = None) -> None:
+    note_html = f'<div class="vg-hero-note">{_e(note)}</div>' if note else ""
     st.html(f'<div class="vg-hero-zone"><div class="vg-hero"><div class="vg-eyebrow">{_e(eyebrow)}</div>'
-            f'<div class="vg-hero-value">{_e(value)}</div><div class="vg-hero-delta">{delta_html}</div></div></div>')
+            f'<div class="vg-hero-value">{_e(value)}</div><div class="vg-hero-delta">{delta_html}</div>'
+            f'{note_html}</div></div>')
 
 
 def facts(items: list[tuple[str, str, str]]) -> None:

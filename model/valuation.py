@@ -108,10 +108,11 @@ def net_value(df: pd.DataFrame, t: date, k: float) -> float | None:
 
 
 def k_at(state: State, lv: Levers, t: date) -> float:
-    """The growth multiple at date t: today's implied k gliding to lv.growth_multiple by lv.k_glide_to, then held."""
+    """The growth multiple at date t: lv.k_start (default: the k the data date's price implies) gliding to
+    lv.growth_multiple by lv.k_glide_to, then held."""
     if not lv.k_glide:
         return lv.growth_multiple
-    k0, t0 = implied_k(state), state.price_date
+    k0, t0 = implied_k(state) if lv.k_start is None else lv.k_start, state.price_date
     span = (lv.k_glide_to - t0).days
     w = 1.0 if span <= 0 else min(max((t - t0).days / span, 0.0), 1.0)
     return k0 + (lv.growth_multiple - k0) * w

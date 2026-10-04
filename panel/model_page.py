@@ -6,9 +6,11 @@ import streamlit as st
 from model import engine, metrics, valuation
 from panel import charts, common, theme
 
-stt = common.current_state()
-lv = common.sidebar(stt)
+pub = common.current_published()
+stt, mode = common.current_state(pub)
+lv = common.sidebar(stt, pub, mode)
 res = common.compute(stt, lv)
+live = common.is_live(lv, mode, pub)
 c = common.colors()
 rate = lv.sata_rate if lv.sata_rate is not None else stt.sata_rate
 s = metrics.summary(stt, stt.share_price, rate)
@@ -17,9 +19,13 @@ T = lv.pt_date
 v, a, row = res["values"][T], res["attribution"], res["attribution"].loc[T]
 r = engine.at(res["path"], T)
 pt, p0 = v["price_target"], stt.share_price
+p_now = common.price_now(mode, stt)
 
 # ------------------------------------------------------------------ hero: the price target
-theme.hero(f"Price target · {T:%b %d, %Y}", f"${pt:,.2f}", f"<b>{pt / p0 - 1:+.0%}</b> vs ${p0:,.2f} today")
+theme.hero(f"{'Your scenario' if pub and not live else 'Price target'} · {T:%b %d, %Y}", f"${pt:,.2f}",
+           f"<b>{pt / p_now - 1:+.0%}</b> vs ${p_now:,.2f} today",
+           None if pub is None else f"Set {pub.set_at:%b %d, %Y} by {pub.set_by}" if live
+           else f"The published target is ${pub.price_target:,.2f}; reset it from the levers panel.")
 if not res["settled"] or not res["table"]["settled"]:
     st.warning("The market mNAV couldn't be made consistent with the valuation for some settings (the multiple feeds on "
                "itself at a high k). Those table cells are blank; try a lower k or Manual market mNAV.")
@@ -42,7 +48,7 @@ theme.cards([
 # ------------------------------------------------------------------ the path to the target (fixed to the target date)
 theme.section(f"The path to {T:%b %Y}",
               f"Net value per share today, what moves it, then the growth premium on top. $ per share; the dotted line "
-              f"is today's price (${p0:,.2f}).")
+              f"is ASST on {stt.price_date:%b %d, %Y} (${p0:,.2f}).")
 with st.container(key="vg_chart"):
     st.altair_chart(charts.waterfall(row, f"{T:%b %Y}", c), width="stretch", theme=None)
 k_story = (f"Today's price implies {valuation.implied_k(stt):.2f}×; the model glides it to {lv.growth_multiple:.2f}× by "
@@ -86,7 +92,7 @@ theme.ledger([
      "math": f"k {v['k']:.2f}× × ${v['gain_per_share']:,.2f}{split}", "value": f"+${v['growth_premium']:,.2f}"},
     {"n": "IV", "title": f"Price target · {T:%b %d, %Y}", "label": "per share", "total": True,
      "math": f"${r.ntav_per_share:,.2f} + ${v['growth_premium']:,.2f} · implied mNAV {v['implied_mnav']:.2f}× · "
-             f"{pt / p0 - 1:+.0%} vs ${p0:,.2f} today",
+             f"{pt / p0 - 1:+.0%} vs ${p0:,.2f} on {stt.price_date:%b %d, %Y}",
      "value": f"${pt:,.2f}"},
 ])
 
@@ -183,3 +189,5 @@ with st.expander("Full model detail", expanded=False):
 st.caption(common.md("Sources: " + " · ".join(f"{k}: {v}" for k, v in stt.sources.items())
                      + ". An independent modeling tool that applies your levers to Strive's published figures; not "
                      "affiliated with or endorsed by Strive, Inc. Not a recommendation."))
+
+common.owner_panel(stt, lv, v, pub, mode)
