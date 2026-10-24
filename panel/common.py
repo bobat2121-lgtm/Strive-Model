@@ -17,11 +17,38 @@ DATA_KEY = "data_mode"          # "published" (the owner's frozen snapshot), "la
 OWNER_KEY, OWNER_MSG, OWNER_PW = "owner_unlocked", "owner_msg", "owner_pw"
 OWNER_HANDLE = "@WallyXIX"
 DATA_LABELS = {"latest": "Latest 8-K and close", "live": "Latest 8-K, live prices"}
+TODAY_REFRESH_SECONDS = 60
 
 
 @st.cache_data(ttl=600, show_spinner="Loading Strive's dashboard…")
 def load_state(live_prices: bool) -> state.State:
     return state.load(live_prices=live_prices)
+
+
+@st.cache_data(ttl=TODAY_REFRESH_SECONDS, show_spinner=False)
+def load_today_state() -> state.State:
+    """The live cards have their own short cache, independent of the published model."""
+    return state.load(live_prices=True)
+
+
+def today_snapshot(fallback: state.State) -> tuple[state.State, str | None]:
+    """Latest company figures and market prices, with a visible warning on fallback.
+
+    A failed refresh must not blank the model. The source layer normally supplies
+    its last good copy; if even that fails, retain the state already on screen.
+    """
+    try:
+        current = load_today_state()
+    except (RuntimeError, ValueError, TypeError, KeyError, OSError, httpx.HTTPError):
+        return fallback, "Latest data is unavailable; showing the model's dated snapshot. Retrying every minute."
+    warnings = []
+    if any("cached" in str(source) or "bundled snapshot" in str(source) for source in current.sources.values()):
+        warnings.append("Company data feed is unavailable; using the last saved company figures with available market prices.")
+    for label in ("BTC price", "ASST price"):
+        source = current.sources.get(label, "")
+        if "quote unavailable" in source:
+            warnings.append(f"{label}: {source}.")
+    return current, " ".join(warnings) or None
 
 
 @st.cache_data(show_spinner=False)
@@ -52,7 +79,8 @@ def current_state(pub: published.Published | None) -> tuple[state.State, str]:
     if mode not in data_modes(pub):
         mode = data_modes(pub)[0]
         st.session_state.pop(DATA_KEY, None)
-    return (pub.state if mode == "published" else load_state(mode == "live")), mode
+    selected = pub.state if mode == "published" else load_state(mode == "live")
+    return state.with_sats_ipo(selected, selected.price_date), mode
 
 
 def is_live(lv: levers.Levers, mode: str, pub: published.Published | None) -> bool:
@@ -61,13 +89,10 @@ def is_live(lv: levers.Levers, mode: str, pub: published.Published | None) -> bo
 
 
 def price_now(mode: str, st_: state.State) -> float:
-    """ASST today: the published snapshot is frozen, so take the latest close for "vs today"."""
+    """ASST today uses the same refreshed quote as the live cards."""
     if mode != "published":
         return st_.share_price
-    try:
-        return load_state(False).share_price
-    except Exception:  # no data source reachable: the snapshot's price
-        return st_.share_price
+    return today_snapshot(st_)[0].share_price
 
 
 # ------------------------------------------------------------------ formats
@@ -262,6 +287,7 @@ def sidebar(st_: state.State, pub: published.Published | None, mode: str) -> lev
                       "data from strive.com (and live prices if you pick them). Your choice stays in your session.")
         if mode != "published" and st.button("Refresh data", width="stretch"):
             load_state.clear()
+            load_today_state.clear()
             compute.clear()
             st.rerun()
 

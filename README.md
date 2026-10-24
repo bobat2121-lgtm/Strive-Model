@@ -28,7 +28,7 @@ values ASST with the multiple Strive itself publishes. A Streamlit app puts the 
 ## How it values ASST
 
 ```
-NTAV per share = (BTC x BTC price + cash + STRC - debt - SATA liquidation preference) / assumed fully diluted shares
+NTAV per share = (BTC x BTC price + cash + STRC - debt - SATA claim - SATS claim) / assumed fully diluted shares
 BTC Yield      = growth in BTC per diluted share over the year (Strive's KPI)
 BTC $ Gain     = BTC held at the start of the year x BTC Yield x year-end BTC price
 Price target   = (NTAV + k x BTC $ Gain) / diluted shares          (reproduces a published $44 sell-side target on ASST)
@@ -41,20 +41,28 @@ added per share that year.
 - **BTC Yield counts every bitcoin bought, including bitcoin bought with SATA money.** SATA holders are owed $100 a share, and NTAV deducts that. The page therefore splits the premium into a SATA-funded and a common-funded part, and shows a net-basis value (gain counted on NTAV ÷ BTC price) as a reference.
 - **FY2026 is stitched from actual history:** the yield is measured from Strive's actual 12/31/25 BTC per share (17,037 sats), and the BTC Gain base includes the 5,048.1 BTC from the Semler merger.
 
+- **SATS:** the October 20, 2026 IPO adds 7 million nonconvertible preferred shares: $700M stated amount, $608.15M estimated net proceeds, and $105M annual dividends. The engine inserts the IPO once into a pre-IPO forecast, deducts the preferred claim in NTAV, reserves dividend cash, and accrues SATS dividends on a 30/360 basis. It does not add diluted common shares. The forecast assumes the $100 liquidation-preference floor and no additional SATS issuance. See the [final prospectus](https://www.sec.gov/Archives/edgar/data/1920406/000095010326015734/dp255138_424b5.htm).
+
 - **SATA:** sold at par, it leaves NTAV per share unchanged on the day. It adds value only while BTC outruns the dividend.
 - **Common:** sold at an mNAV above 1, it adds 1 − 1/mNAV of each dollar raised to NTAV per share.
 
 **Attribution:** the price target is built up in steps that add up exactly:
 
-    NTAV today → BTC move → amplification → SATA dividends → issuance → op. costs → NTAV at the date
-               → growth premium (SATA-funded + common-funded) → price target
+    NTAV today → BTC move → amplification → SATA dividends → SATS dividends → SATS issuance cost → common issuance → op. costs → NTAV at the date
+               → growth premium (SATA-funded + SATS-funded + common-funded) → price target
 
 - **BTC move**: net assets tracking BTC one-for-one.
-- **Amplification**: what the SATA-funded BTC gains, after the 18-month cash-reserve drag.
-- **SATA dividends**: the dividends paid on that SATA.
+- **Amplification**: what preferred-funded BTC gains, after the dividend cash-reserve drag.
+- **SATA / SATS dividends**: the separate dividend costs. **SATS issuance cost**: the difference between the initial preferred claim and estimated net proceeds.
 - **Issuance**: common and warrants sold above NTAV per share.
 - **Op. costs**: Strive's net cash burn. This is not dividends.
 - **Growth premium**: k × the year's BTC $ Gain per share, split by who paid for that year's bitcoin.
+
+## Live metrics and model detail
+
+**Strive today** always loads current company data and market quotes independently of the selected published scenario. It refreshes every 60 seconds while the browser session is active. BTC spot and ASST quotes refresh independently, and their source timestamps are shown. Reported holdings remain dated to the latest filing; live prices do not imply live holdings. A pre-IPO reported cash balance is supplemented by the estimated SATS net proceeds, explicitly labeled pro forma; reported balances that already include the IPO are not supplemented again. Cached or unavailable sources are identified instead of silently presented as current.
+
+The first **Full model detail** tab is **Model**, with the requested column order. Rows show the starting snapshot and each forecast year end. BTC yield and BTC dollar gain are for that calendar year (year to date on the starting row), rather than cumulative forecast yield. Historical published targets retain their original values; when the new SATS model changes the recomputed target, the hero identifies the previously published target.
 
 ## Run
 

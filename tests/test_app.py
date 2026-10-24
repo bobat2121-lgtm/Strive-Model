@@ -23,6 +23,8 @@ def pub(snap):
 
 
 def _app(monkeypatch, snap, pub):
+    from panel import common
+    common.load_today_state.clear()
     monkeypatch.setattr(state, "load", lambda **_: snap)
     monkeypatch.setattr(published, "load", lambda *a, **k: pub)
     return AppTest.from_file("../panel/model_page.py", default_timeout=90)
@@ -55,6 +57,7 @@ def test_model_page_renders(monkeypatch, snap):
     assert [e.label for e in at.main.expander][:2] == ["Key assumptions", "Full model detail"]  # both start folded
     assert "SATA issuance" in [t.label for t in at.tabs]           # the SATA schedule, year by year
     assert "PT history" in [t.label for t in at.tabs]              # every published target
+    assert at.tabs[0].label == "Model"
     assert all(e.proto.expanded for e in at.sidebar.expander if e.label != "Owner")  # lever sections start open
 
 
@@ -143,3 +146,40 @@ def test_publishing_without_a_password_secret_is_off(monkeypatch, snap, pub):
     monkeypatch.delenv("OWNER_PASSWORD", raising=False)
     at = _app(monkeypatch, snap, pub).run()
     assert not [w for w in at.text_input if w.key == "owner_pw"]
+
+
+def test_today_refreshes_independently_of_published_snapshot(monkeypatch, snap, pub):
+    from datetime import date
+    from panel import common
+
+    current = replace(snap, as_of=date(2026, 10, 16), price_date=date(2026, 10, 24),
+                      share_price=42.0, btc_price=100_000.0, sata_rate=0.145,
+                      sats_notional=700_000_000.0, sats_ipo_applied=True)
+    at = _app(monkeypatch, current, pub).run()
+    assert not at.exception
+    cards = next(h.proto.body for h in at.get("html") if "SATS outstanding" in h.proto.body)
+    assert "$42.00" in cards and "14.50%" in cards and "$700.0M" in cards
+    assert any("Oct 16, 2026" in h.proto.body for h in at.get("html"))
+
+    monkeypatch.setattr(state, "load", lambda **_: replace(current, share_price=43.0))
+    common.load_today_state.clear()
+    at.run()
+    cards = next(h.proto.body for h in at.get("html") if "SATS outstanding" in h.proto.body)
+    assert "$43.00" in cards
+    assert _lever(at, "k_start.published").value == pytest.approx(pub.levers.k_start)
+
+
+def test_first_model_table_has_requested_order_and_annual_gains(monkeypatch, snap, pub):
+    from panel.detail import MODEL_COLUMNS
+    from panel import common
+    at = _app(monkeypatch, snap, pub).run()
+    assert not at.exception
+    frame = at.dataframe[0].value
+    assert list(frame.columns) == MODEL_COLUMNS
+    assert "BTC $ gain for that year" in frame
+    assert frame.iloc[1]["SATS"] == "$700.0M"
+    result = common.compute(pub.state, pub.levers)
+    for day, value in result["values"].items():
+        label = f"{day:%b %d, %Y}" + (" (target)" if day == pub.levers.pt_date else "")
+        row = result["path"].loc[str(day)]
+        assert frame.loc[label, "BTC $ gain for that year"] == common.usd(value["btc_gain"] * row.btc_price)

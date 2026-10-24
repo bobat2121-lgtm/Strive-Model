@@ -52,7 +52,7 @@ def test_sata_rate_holds_or_glides(st, lv):
     w = glide.loc[:pd.Timestamp(date(2028, 6, 30))]
     r, prev, days = w.iloc[-1], w.iloc[-2], (w.index[-1] - w.index[-2]).days
     assert r.sata_rate == pytest.approx(0.10)
-    assert r.dividends == pytest.approx(0.10 * prev.sata_notional * days / 365)
+    assert r.sata_dividends == pytest.approx(0.10 * prev.sata_notional * days / 365)
 
 
 def test_mnav_can_run_through_year_end_points(st, lv):
@@ -66,7 +66,7 @@ def test_mnav_can_run_through_year_end_points(st, lv):
 
 def test_cash_is_conserved(st, lv):
     df = engine.run(st, lv, 0.30, 1.6)
-    inflow = (df.raised_sata + df.raised_common + df.raised_warrants - df.dividends - df.opex).sum()
+    inflow = (df.raised_sata + df.raised_sats + df.raised_common + df.raised_warrants - df.dividends - df.opex).sum()
     assert inflow == pytest.approx(df.cash.iloc[-1] - st.cash + df.btc_bought_usd.sum(), rel=1e-9)
 
 
@@ -75,7 +75,7 @@ def test_sata_at_par_leaves_ntav_per_share_unchanged_but_for_dividends(st, lv):
     flat = replace(lv, ye_btc_price=st.btc_price)
     df = engine.run(st, flat, 0.0, common=False, warrants=False, burn=False)
     ntav = df.ntav_per_share * df.fd_shares
-    assert (ntav.diff().iloc[1:] + df.dividends.iloc[1:]).abs().max() < 1e-3
+    assert (ntav.diff().iloc[1:] + df.dividends.iloc[1:] + df.sats_issuance_cost.iloc[1:]).abs().max() < 1e-3
     assert df.amplification.iloc[-1] > df.amplification.iloc[0]  # BTC flat: amplification climbs with SATA
 
 

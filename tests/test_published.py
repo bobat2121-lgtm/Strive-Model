@@ -39,6 +39,12 @@ def test_history_entries_survive_the_round_trip(pub, tmp_path):
     assert back.history == [e]
 
 
+def test_cash_provenance_date_survives_the_round_trip(pub):
+    back = published.loads(published.dumps(pub))
+    assert back.state.cash_as_of == pub.state.cash_as_of
+    assert back.state.cash_as_of.isoformat() == "2026-09-25"
+
+
 def test_missing_file_means_nothing_published(tmp_path):
     assert published.load(tmp_path / "none.json") is None
 
