@@ -41,7 +41,7 @@ def _dated(cls, raw: dict):
         if f.name not in raw:
             continue
         v = raw[f.name]
-        out[f.name] = date.fromisoformat(v) if f.type == "date" and isinstance(v, str) else v
+        out[f.name] = date.fromisoformat(v) if f.type in ("date", "date | None") and isinstance(v, str) else v
     return cls(**out)
 
 

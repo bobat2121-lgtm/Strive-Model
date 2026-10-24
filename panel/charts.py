@@ -7,8 +7,10 @@ import altair as alt
 import pandas as pd
 
 LABELS = {"btc_move": "BTC move", "amplification": "Amplification", "sata_dividends": "SATA dividends",
+          "sats_dividends": "SATS dividends", "sats_issuance_cost": "SATS issuance cost",
           "issuance": "Common issuance", "op_costs": "Op. costs", "growth_premium": "Growth premium"}
-PREMIUM = {"premium_sata": "SATA premium", "premium_common": "Common premium"}  # the growth premium, by funding
+PREMIUM = {"premium_sata": "SATA premium", "premium_sats": "SATS premium",
+           "premium_common": "Common premium"}  # the growth premium, by funding
 
 
 def styled(chart, c: dict):
@@ -37,7 +39,7 @@ def waterfall(row: pd.Series, when: str, c: dict) -> alt.LayerChart:
         cum += v
 
     total("NTAV today", cum)
-    for key in ("btc_move", "amplification", "sata_dividends", "issuance", "op_costs"):
+    for key in ("btc_move", "amplification", "sata_dividends", "sats_dividends", "sats_issuance_cost", "issuance", "op_costs"):
         delta(key)
     total(f"NTAV {when}", float(row["ntav_end"]))
     cum = float(row["ntav_end"])

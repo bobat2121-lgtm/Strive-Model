@@ -13,8 +13,8 @@ dashboard's on 10/4/26 (ASST $30.03, BTC $85,224.79); tests/test_metrics.py pins
     Amplification                   = (debt + preferred notional) / BTC NAV                  [52.1%]
     Total dividend coverage (years) = TAV / annual SATA dividends                            [16.6]
 
-SATA's liquidation preference is its $100 stated amount while it trades at par, so preferred = notional throughout.
-Every function takes any object with btc, btc_price, fd_shares, sata_notional, cash, securities and debt (State, Book).
+SATA's liquidation preference is its stated amount. SATS is a separate, nonconvertible preferred: its liquidation
+claim is at least its stated amount, while dividends accrue on the stated amount rather than its market price.
 """
 from __future__ import annotations
 
@@ -32,6 +32,20 @@ class Book:
     cash: float
     securities: float
     debt: float = 0.0
+    sats_notional: float = 0.0
+    sats_liquidation_preference: float | None = None
+    sats_rate: float = 0.15
+
+
+def sats_claim(b) -> float:
+    """SATS' liquidation claim; a quoted preferred price below par cannot reduce the $100 floor."""
+    notional = getattr(b, "sats_notional", 0.0)
+    claim = getattr(b, "sats_liquidation_preference", None)
+    return max(notional, claim if claim is not None else notional)
+
+
+def preferred_claim(b) -> float:
+    return b.sata_notional + sats_claim(b)
 
 
 def btc_nav(b) -> float:
@@ -43,7 +57,7 @@ def tav(b) -> float:
 
 
 def ntav(b) -> float:
-    return tav(b) - b.debt - b.sata_notional
+    return tav(b) - b.debt - preferred_claim(b)
 
 
 def ntav_per_share(b) -> float:
@@ -60,7 +74,7 @@ def price_at(b, m: float) -> float:
 
 
 def enterprise_value(b, price: float) -> float:
-    return b.fd_shares * price + b.debt + b.sata_notional - b.cash - b.securities
+    return b.fd_shares * price + b.debt + preferred_claim(b) - b.cash - b.securities
 
 
 def ev_to_tav(b, price: float) -> float:
@@ -77,15 +91,20 @@ def accretion_premium(b, price: float) -> float:
 
 
 def amplification(b) -> float:
-    return (b.debt + b.sata_notional) / btc_nav(b)
+    return (b.debt + b.sata_notional + getattr(b, "sats_notional", 0.0)) / btc_nav(b)
 
 
 def sats_per_share(b) -> float:
     return b.btc / b.fd_shares * 1e8
 
 
-def dividend_coverage_years(b, sata_rate: float) -> float:
-    annual = sata_rate * b.sata_notional
+def annual_dividends(b, sata_rate: float, sats_rate: float | None = None) -> float:
+    return (sata_rate * b.sata_notional
+            + (getattr(b, "sats_rate", 0.15) if sats_rate is None else sats_rate) * getattr(b, "sats_notional", 0.0))
+
+
+def dividend_coverage_years(b, sata_rate: float, sats_rate: float | None = None) -> float:
+    annual = annual_dividends(b, sata_rate, sats_rate)
     return tav(b) / annual if annual else math.inf
 
 
@@ -95,4 +114,6 @@ def summary(b, price: float, sata_rate: float) -> dict:
             "ev_to_btc_nav": ev_to_btc_nav(b, price), "accretion_premium": accretion_premium(b, price),
             "amplification": amplification(b), "sats_per_share": sats_per_share(b),
             "dividend_coverage_years": dividend_coverage_years(b, sata_rate),
-            "annual_dividends": sata_rate * b.sata_notional}
+            "annual_dividends": annual_dividends(b, sata_rate),
+            "annual_sata_dividends": sata_rate * b.sata_notional,
+            "annual_sats_dividends": getattr(b, "sats_rate", 0.15) * getattr(b, "sats_notional", 0.0)}

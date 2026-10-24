@@ -9,7 +9,7 @@ the last good copy is used when a call fails.
 from __future__ import annotations
 
 import logging
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import httpx
 
@@ -27,8 +27,11 @@ def _pull(name: str, path: str, params: dict | None, offline: bool, shape=lambda
             r = httpx.get(BASE + path, params=params, headers=UA, timeout=30)
             r.raise_for_status()
             data = shape(r.json())
-            cache.save(name, data)
-            return data, "strive.com (live)"
+            try:
+                cache.save(name, data)
+            except OSError as e:
+                log.warning("Could not save %s cache: %s", name, e)
+            return data, f"strive.com (live; checked {datetime.now(timezone.utc):%Y-%m-%d %H:%M UTC})"
         except (httpx.HTTPError, ValueError, KeyError, TypeError) as e:  # network, bad JSON, or a changed shape
             log.warning("strive.com %s failed, using the cached copy: %s", path, e)
     data, label = cache.load(name)
@@ -38,8 +41,24 @@ def _pull(name: str, path: str, params: dict | None, offline: bool, shape=lambda
 def _trim_calculated(d: dict) -> dict:
     # The endpoint returns every day since May 2025 (~1.5 MB) whatever the date range; keep what the model reads.
     data = d["data"]
-    return {"rows": data["btcHoldings"][-30:], "preferredStocks": d.get("preferredStocks") or [],
+    rows = data["btcHoldings"]
+    if not isinstance(rows, list) or not all(isinstance(r, dict) and r.get("date") for r in rows) or not any(
+        r.get("date") and r.get("sharePrice") and r.get("btcPrice") and r.get("btcHoldings")
+        for r in rows
+    ):
+        raise ValueError("no usable priced dashboard rows")
+    # Do not rely on an undocumented API's ordering or replace a working cache
+    # with an empty but successful HTTP response.
+    rows = sorted(rows, key=lambda r: r["date"])
+    return {"rows": rows[-30:], "preferredStocks": d.get("preferredStocks") or [],
             "stockVolume": data.get("stockVolume") or {}}
+
+
+def _base_data(d: dict) -> dict:
+    data = d["data"]
+    if not isinstance(data, dict) or not isinstance(data.get("shares"), list) or not data["shares"]:
+        raise ValueError("no usable company share history")
+    return data
 
 
 def calculated(offline: bool = False, today: date | None = None) -> tuple[dict | None, str]:
@@ -52,4 +71,4 @@ def calculated(offline: bool = False, today: date | None = None) -> tuple[dict |
 
 def base_data(offline: bool = False) -> tuple[dict | None, str]:
     """Share-count history, cash history and the BTC ledger."""
-    return _pull("strive_base", "/treasury/api/dashboard/base-data", None, offline, lambda d: d["data"])
+    return _pull("strive_base", "/treasury/api/dashboard/base-data", None, offline, _base_data)

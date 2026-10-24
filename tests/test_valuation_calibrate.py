@@ -51,7 +51,7 @@ def test_price_target_by_hand(st, lv):
     v = valuation.price_target(df, st, date(2028, 12, 31), lv)
     assert v["btc_yield"] == pytest.approx(y)
     assert v["price_target"] == pytest.approx(b.ntav_per_share + 3 * a.btc * y * b.btc_price / b.fd_shares)
-    assert v["premium_sata"] + v["premium_common"] == pytest.approx(v["growth_premium"])
+    assert v["premium_sata"] + v["premium_sats"] + v["premium_common"] == pytest.approx(v["growth_premium"])
 
 
 def test_fy2026_is_stitched_from_history_with_semler(st, lv):
@@ -68,10 +68,10 @@ def test_fy2026_is_stitched_from_history_with_semler(st, lv):
 def test_attribution_adds_up_to_the_price_target(st, lv):
     a = valuation.attribution(st, lv, 0.40)
     assert (a["start"] + a[valuation.PARTS].sum(axis=1) - a["end"]).abs().max() < 1e-9
-    steps = ["btc_move", "amplification", "sata_dividends", "issuance", "op_costs"]
+    steps = ["btc_move", "amplification", "sata_dividends", "sats_dividends", "sats_issuance_cost", "issuance", "op_costs"]
     assert (a["start"] + a[steps].sum(axis=1) - a["ntav_end"]).abs().max() < 1e-9
     split = a.dropna(subset=["premium_sata"])
-    assert (split["premium_sata"] + split["premium_common"] - split["growth_premium"]).abs().max() < 1e-9
+    assert (split["premium_sata"] + split["premium_sats"] + split["premium_common"] - split["growth_premium"]).abs().max() < 1e-9
     assert list(a.index) == [date(y, 12, 31) for y in range(2026, 2032)]
     assert a["start"].iloc[0] == pytest.approx(metrics.ntav_per_share(st))
     assert a["today_price"].iloc[0] == pytest.approx(30.03)
@@ -81,7 +81,7 @@ def test_sata_dividends_are_their_own_step(st, lv):
     a = valuation.attribution(st, lv, 0.40)
     t = date(2028, 12, 31)
     run = engine.run(st, lv, 0.40, common=False, warrants=False, burn=False)
-    paid = run.loc[:"2028-12-31", "dividends"].sum() / st.fd_shares
+    paid = run.loc[:"2028-12-31", "sata_dividends"].sum() / st.fd_shares
     assert a.loc[t, "sata_dividends"] == pytest.approx(-paid) and paid > 0
     assert a.loc[t, "op_costs"] > a.loc[t, "sata_dividends"]  # the burn is far smaller than the dividends
 

@@ -25,7 +25,7 @@ class Levers:
     sata_rate: float | None = None           # None = Strive's current rate (13%), the starting point
     sata_rate_target: float | None = None    # None holds the rate static; a number glides to it by sata_rate_glide_to
     sata_rate_glide_to: date = date(2027, 12, 31)
-    reserve_months: float = 18.0             # months of SATA dividends Strive keeps in cash
+    reserve_months: float = 18.0             # months of SATA and SATS dividends kept in cash
     # 3) Common: new shares each week as a fraction of FD shares, sold at the modeled price
     common_weekly_pct: float = 0.005
     # 4) Valuation, BTC-earnings method: price target = (NTAV + k x the year's BTC $ Gain) / FD shares
