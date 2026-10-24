@@ -5,7 +5,7 @@ import hmac
 import math
 import os
 import time
-from dataclasses import replace
+from dataclasses import asdict, replace
 from datetime import date
 
 import httpx
@@ -26,9 +26,18 @@ def load_state(live_prices: bool) -> state.State:
 
 
 @st.cache_data(ttl=TODAY_REFRESH_SECONDS, show_spinner=False)
+def _load_today_payload() -> dict:
+    """Cache field values so module reloads cannot invalidate a State pickle."""
+    return asdict(state.load(live_prices=True))
+
+
 def load_today_state() -> state.State:
     """The live cards have their own short cache, independent of the published model."""
-    return state.load(live_prices=True)
+    return state.State(**_load_today_payload())
+
+
+# Preserve the refresh hook used by the sidebar and offline application tests.
+load_today_state.clear = _load_today_payload.clear
 
 
 def today_snapshot(fallback: state.State) -> tuple[state.State, str | None]:

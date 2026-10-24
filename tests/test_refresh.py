@@ -33,6 +33,32 @@ def test_today_loads_independently_of_published_snapshot(monkeypatch, st):
     assert len(calls) == 1  # hero and cards share one short-lived live cache
 
 
+def test_today_cache_survives_state_class_reload(monkeypatch, st):
+    """A running fragment may still return an instance of the pre-reload class."""
+    import pickle
+
+    def init(self, **payload):
+        self.__dict__.update(payload)
+
+    reloaded_state = type("State", (), {"__init__": init})
+    monkeypatch.setattr(state, "State", reloaded_state)
+    calls = []
+
+    def load(**kwargs):
+        calls.append(kwargs)
+        return st
+
+    monkeypatch.setattr(state, "load", load)
+    with pytest.raises(pickle.PicklingError):
+        pickle.dumps(st)  # reproduces Streamlit's old-class serialization failure
+
+    current = common.load_today_state()
+    assert type(current) is reloaded_state
+    assert current.btc == st.btc and current.as_of == st.as_of
+    assert common.load_today_state().history == st.history
+    assert calls == [{"live_prices": True}]
+
+
 def test_failed_today_refresh_keeps_dated_snapshot_visible(monkeypatch, st):
     def unavailable(**kwargs):
         raise RuntimeError("no source or cache")
